@@ -1,0 +1,14 @@
+# BMad framework files (local development only)
+_bmad/
+_bmad-output/
+design-artifacts/
+# Claude Code settings and skills
+.claude/
+
+# PocketBase runtime data (never commit)
+pocketbase/pb_data/
+
+# Frontend build output and local env
+frontend/dist/
+frontend/.env
+frontend/node_modules/
