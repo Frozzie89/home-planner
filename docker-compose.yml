@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v3.3
+    image: traefik:v3.7.1
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -18,11 +18,9 @@ services:
       context: ./pocketbase
     volumes:
       - ./pocketbase/pb_data:/pb/pb_data
-      - ./pocketbase/pb_hooks:/pb/pb_hooks:ro
-      - ./pocketbase/pb_migrations:/pb/pb_migrations:ro
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pocketbase.rule=Host(`pb.home-planner.local`)"
+      - "traefik.http.routers.pocketbase.rule=Host(`${POCKETBASE_HOST}`)"
       - "traefik.http.routers.pocketbase.entrypoints=web"
       - "traefik.http.services.pocketbase.loadbalancer.server.port=8090"
     restart: unless-stopped
@@ -32,7 +30,7 @@ services:
       context: ./frontend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`home-planner.local`)"
+      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_HOST}`)"
       - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
     restart: unless-stopped

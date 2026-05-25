@@ -6,7 +6,11 @@
   "image": "mcr.microsoft.com/devcontainers/typescript-node:4-24-trixie",
 
   // Features to add to the dev container. More info: https://containers.dev/features.
-  // "features": {},
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
+    }
+  },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   "forwardPorts": [5173],
@@ -18,7 +22,7 @@
   "updateRemoteUserUID": false,
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "cd frontend && npm ci",
+  "postCreateCommand": "wget -q https://github.com/pocketbase/pocketbase/releases/download/v0.27.0/pocketbase_0.27.0_linux_amd64.zip -O /tmp/pb.zip && unzip -o /tmp/pb.zip -d /tmp/pb && sudo mv /tmp/pb/pocketbase /usr/local/bin/pocketbase && rm -rf /tmp/pb /tmp/pb.zip && cd frontend && npm ci",
 
   // Configure tool-specific properties.
   "customizations": {
@@ -26,7 +30,8 @@
       "extensions": [
         "vue.volar",
         "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint"
+        "dbaeumer.vscode-eslint",
+        "ms-azuretools.vscode-containers"
       ]
     }
   }

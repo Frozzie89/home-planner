@@ -1,4 +1,8 @@
 import { createRouter, createWebHistory, RouterView } from 'vue-router'
+import { useAuthStore } from '@/shared/stores/auth'
+import { pb } from '@/shared/lib/pocketbase'
+
+const PUBLIC_ROUTES = ['/auth']
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -48,6 +52,31 @@ const router = createRouter({
       redirect: '/',
     },
   ],
+})
+
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+
+  if (!authStore.isAuthenticated && pb.authStore.isValid && (authStore.initStatus === 'idle' || authStore.initStatus === 'error')) {
+    await authStore.init()
+  }
+
+  if (PUBLIC_ROUTES.includes(to.path)) {
+    if (pb.authStore.isValid) {
+      return authStore.householdId ? { path: '/finances' } : { path: '/setup' }
+    }
+    return true
+  }
+
+  if (!pb.authStore.isValid) {
+    return { path: '/auth' }
+  }
+
+  if (!authStore.householdId && to.path !== '/setup') {
+    return { path: '/setup' }
+  }
+
+  return true
 })
 
 export default router
