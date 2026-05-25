@@ -40,19 +40,6 @@ jobs:
           path: frontend/dist/
           retention-days: 1
 
-  docker-build:
-    name: Docker Build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build frontend image
-        run: docker build ./frontend
-
-      - name: Build pocketbase image
-        run: docker build ./pocketbase
-
   smoke:
     name: Playwright Smoke Tests
     runs-on: ubuntu-latest
