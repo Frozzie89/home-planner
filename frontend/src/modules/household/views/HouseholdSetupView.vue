@@ -19,7 +19,7 @@
       <div class="form-field">
         <label for="currency">Display Currency</label>
         <Select
-          id="currency"
+          inputId="currency"
           v-model="selectedCurrency"
           :options="CURRENCY_OPTIONS"
           option-label="label"
@@ -83,6 +83,7 @@ function validateName() {
 }
 
 async function handleSubmit() {
+  if (createStatus.value === 'loading') return
   validateName()
   if (!isFormValid.value) return
 

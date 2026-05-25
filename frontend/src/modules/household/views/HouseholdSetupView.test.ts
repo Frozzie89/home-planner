@@ -11,18 +11,19 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockCreate, mockUpdate, mockRouterPush } = vi.hoisted(() => ({
-  mockCreate: vi.fn(),
-  mockUpdate: vi.fn(),
+const { mockHouseholdsCreate, mockMembersCreate, mockHouseholdsUpdate, mockRouterPush } = vi.hoisted(() => ({
+  mockHouseholdsCreate: vi.fn(),
+  mockMembersCreate: vi.fn(),
+  mockHouseholdsUpdate: vi.fn(),
   mockRouterPush: vi.fn(),
 }))
 
 vi.mock('@/shared/lib/pocketbase', () => ({
   pb: {
-    collection: (_name: string) => ({
-      create: mockCreate,
-      update: mockUpdate,
-    }),
+    collection: (name: string) => {
+      if (name === 'members') return { create: mockMembersCreate }
+      return { create: mockHouseholdsCreate, update: mockHouseholdsUpdate }
+    },
   },
 }))
 
@@ -73,8 +74,8 @@ function mountView() {
           inheritAttrs: false,
         },
         Select: {
-          template: '<select :id="id"><option v-for="o in options" :key="o.code" :value="o.code">{{ o.label }}</option></select>',
-          props: ['modelValue', 'id', 'options', 'optionLabel', 'optionValue'],
+          template: '<select :id="inputId || id" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="o in options" :key="o.code" :value="o.code">{{ o.label }}</option></select>',
+          props: ['modelValue', 'id', 'inputId', 'options', 'optionLabel', 'optionValue'],
           emits: ['update:modelValue'],
         },
         Button: {
@@ -146,21 +147,20 @@ describe('HouseholdSetupView', () => {
 
   describe('form submission', () => {
     beforeEach(() => {
-      mockCreate
-        .mockResolvedValueOnce({
-          id: 'hh-1',
-          name: 'The Smiths',
-          currency: 'EUR',
-          split_ratios: {},
-          reminder_day: 'Monday',
-        })
-        .mockResolvedValueOnce({
-          id: 'member-1',
-          household_id: 'hh-1',
-          user_id: 'user-123',
-          role: 'admin',
-        })
-      mockUpdate.mockResolvedValueOnce({})
+      mockHouseholdsCreate.mockResolvedValueOnce({
+        id: 'hh-1',
+        name: 'The Smiths',
+        currency: 'EUR',
+        split_ratios: {},
+        reminder_day: 'Monday',
+      })
+      mockMembersCreate.mockResolvedValueOnce({
+        id: 'member-1',
+        household_id: 'hh-1',
+        user_id: 'user-123',
+        role: 'admin',
+      })
+      mockHouseholdsUpdate.mockResolvedValueOnce({})
       mockRouterPush.mockResolvedValueOnce(undefined)
     })
 
@@ -168,9 +168,9 @@ describe('HouseholdSetupView', () => {
       const wrapper = mountView()
       await wrapper.find('#household-name').setValue('The Smiths')
       await wrapper.find('button').trigger('click')
-      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalled())
+      await vi.waitFor(() => expect(mockHouseholdsCreate).toHaveBeenCalled())
 
-      expect(mockCreate).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      expect(mockHouseholdsCreate).toHaveBeenCalledWith(expect.objectContaining({
         name: 'The Smiths',
         currency: 'EUR',
         split_ratios: {},
@@ -182,13 +182,24 @@ describe('HouseholdSetupView', () => {
       const wrapper = mountView()
       await wrapper.find('#household-name').setValue('The Smiths')
       await wrapper.find('button').trigger('click')
-      await vi.waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(2))
+      await vi.waitFor(() => expect(mockMembersCreate).toHaveBeenCalled())
 
-      expect(mockCreate).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      expect(mockMembersCreate).toHaveBeenCalledWith(expect.objectContaining({
         household_id: 'hh-1',
         user_id: 'user-123',
         role: 'admin',
       }))
+    })
+
+    it('calls pb.collection("households").update with split_ratios after member is created', async () => {
+      const wrapper = mountView()
+      await wrapper.find('#household-name').setValue('The Smiths')
+      await wrapper.find('button').trigger('click')
+      await vi.waitFor(() => expect(mockRouterPush).toHaveBeenCalled())
+
+      expect(mockHouseholdsUpdate).toHaveBeenCalledWith('hh-1', {
+        split_ratios: { 'member-1': 100 },
+      })
     })
 
     it('updates authStore.householdId and authStore.role after success', async () => {
@@ -222,11 +233,23 @@ describe('HouseholdSetupView', () => {
       await wrapper.find('button').trigger('click')
       await vi.waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith('/finances'))
     })
+
+    it('propagates selected currency to households.create', async () => {
+      const wrapper = mountView()
+      await wrapper.find('#household-name').setValue('The Smiths')
+      await wrapper.find('#currency').setValue('GBP')
+      await wrapper.find('button').trigger('click')
+      await vi.waitFor(() => expect(mockHouseholdsCreate).toHaveBeenCalled())
+
+      expect(mockHouseholdsCreate).toHaveBeenCalledWith(expect.objectContaining({
+        currency: 'GBP',
+      }))
+    })
   })
 
   describe('error state', () => {
     it('shows inline error when PocketBase throws on submit', async () => {
-      mockCreate.mockRejectedValueOnce(new Error('Network error'))
+      mockHouseholdsCreate.mockRejectedValueOnce(new Error('Network error'))
 
       const wrapper = mountView()
       await wrapper.find('#household-name').setValue('The Smiths')
@@ -234,6 +257,52 @@ describe('HouseholdSetupView', () => {
       await vi.waitFor(() => expect(wrapper.find('.submit-error').exists()).toBe(true))
 
       expect(wrapper.find('.submit-error').text()).toContain('Something went wrong')
+      expect(mockRouterPush).not.toHaveBeenCalled()
+    })
+
+    it('shows error and does not navigate when members.create throws', async () => {
+      mockHouseholdsCreate.mockResolvedValueOnce({
+        id: 'hh-1',
+        name: 'The Smiths',
+        currency: 'EUR',
+        split_ratios: {},
+        reminder_day: 'Monday',
+      })
+      mockMembersCreate.mockRejectedValueOnce(new Error('Members create failed'))
+
+      const wrapper = mountView()
+      await wrapper.find('#household-name').setValue('The Smiths')
+      await wrapper.find('button').trigger('click')
+      await vi.waitFor(() => expect(wrapper.find('.submit-error').exists()).toBe(true))
+
+      expect(wrapper.find('.submit-error').text()).toContain('Something went wrong')
+      expect(mockAuthStore.householdId).toBeNull()
+      expect(mockRouterPush).not.toHaveBeenCalled()
+    })
+
+    it('shows error and does not navigate when households.update (split_ratios) throws', async () => {
+      mockHouseholdsCreate.mockResolvedValueOnce({
+        id: 'hh-1',
+        name: 'The Smiths',
+        currency: 'EUR',
+        split_ratios: {},
+        reminder_day: 'Monday',
+      })
+      mockMembersCreate.mockResolvedValueOnce({
+        id: 'member-1',
+        household_id: 'hh-1',
+        user_id: 'user-123',
+        role: 'admin',
+      })
+      mockHouseholdsUpdate.mockRejectedValueOnce(new Error('Update failed'))
+
+      const wrapper = mountView()
+      await wrapper.find('#household-name').setValue('The Smiths')
+      await wrapper.find('button').trigger('click')
+      await vi.waitFor(() => expect(wrapper.find('.submit-error').exists()).toBe(true))
+
+      expect(wrapper.find('.submit-error').text()).toContain('Something went wrong')
+      expect(mockAuthStore.householdId).toBeNull()
       expect(mockRouterPush).not.toHaveBeenCalled()
     })
   })
