@@ -18,7 +18,7 @@
         <p>{{ errorMessage }}</p>
       </div>
       <div v-else-if="providers.length === 0">
-        <p>No sign-in options are configured. Please contact your administrator.</p>
+        <p>No sign-in providers are configured on this instance. If you manage this server, enable at least one OAuth2 provider in the PocketBase admin panel under Settings → Auth providers.</p>
       </div>
       <div v-else>
         <button
@@ -71,9 +71,14 @@ async function loadProviders() {
     const authMethods = await pb.collection('users').listAuthMethods()
     providers.value = authMethods.oauth2.providers
     providersStatus.value = 'success'
-  } catch {
-    providersStatus.value = 'error'
-    errorMessage.value = 'Could not load sign-in options. Please try again.'
+  } catch (e: any) {
+    if (e?.status === 0 || e?.isAbort) {
+      providersStatus.value = 'error'
+      errorMessage.value = 'Cannot reach the authentication server. Check that PocketBase is running and reachable.'
+    } else {
+      providersStatus.value = 'error'
+      errorMessage.value = `Sign-in unavailable (${e?.status ?? 'unknown error'}). Check the PocketBase admin panel.`
+    }
   }
 }
 
