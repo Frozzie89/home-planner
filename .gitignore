@@ -8,6 +8,9 @@ design-artifacts/
 # PocketBase runtime data (never commit)
 pocketbase/pb_data/
 
+# Root env (copy from .env.example)
+.env
+
 # Frontend build output and local env
 frontend/dist/
 frontend/.env
