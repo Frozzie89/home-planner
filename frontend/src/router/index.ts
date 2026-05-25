@@ -2,7 +2,12 @@ import { createRouter, createWebHistory, RouterView } from 'vue-router'
 import { useAuthStore } from '@/shared/stores/auth'
 import { pb } from '@/shared/lib/pocketbase'
 
-const PUBLIC_ROUTES = ['/auth']
+declare module 'vue-router' {
+  interface RouteMeta {
+    public?: boolean
+    shellExcluded?: boolean
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -10,11 +15,13 @@ const router = createRouter({
     {
       path: '/auth',
       name: 'auth',
+      meta: { public: true, shellExcluded: true },
       component: () => import('../modules/household/views/AuthView.vue'),
     },
     {
       path: '/setup',
       name: 'setup',
+      meta: { shellExcluded: true },
       component: () => import('../modules/household/views/HouseholdSetupView.vue'),
     },
     {
@@ -61,7 +68,7 @@ router.beforeEach(async (to) => {
     await authStore.init()
   }
 
-  if (PUBLIC_ROUTES.includes(to.path)) {
+  if (to.meta.public) {
     if (pb.authStore.isValid) {
       return authStore.householdId ? { path: '/finances' } : { path: '/setup' }
     }
