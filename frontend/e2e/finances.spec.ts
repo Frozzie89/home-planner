@@ -7,6 +7,8 @@ const PB_URL = 'http://pb.home-planner.localhost'
 test('finances view renders without WCAG 2.1 AA violations', async ({ page }) => {
   // Auth valid + householdId set → router allows /finances
   await injectAuth(page)
+  // Catch-all registered first so specific routes below take precedence (Playwright LIFO)
+  await mockRemainingPbCalls(page)
   await mockMembersApi(page, true)
 
   // Mock the expenses endpoint so FinancesView doesn't fail with network errors
@@ -17,8 +19,6 @@ test('finances view renders without WCAG 2.1 AA violations', async ({ page }) =>
       body: JSON.stringify({ page: 1, perPage: 30, totalItems: 0, totalPages: 0, items: [] }),
     }),
   )
-
-  await mockRemainingPbCalls(page)
 
   await page.goto('/finances')
   await page.waitForLoadState('networkidle')

@@ -5,8 +5,9 @@ import { injectAuth, mockMembersApi, mockRemainingPbCalls } from './helpers/auth
 test('household setup view renders without WCAG 2.1 AA violations', async ({ page }) => {
   // Auth valid, but no household → router allows /setup
   await injectAuth(page, { householdId: null })
-  await mockMembersApi(page, false) // 404 → householdId stays null
+  // Catch-all registered first so specific routes below take precedence (Playwright LIFO)
   await mockRemainingPbCalls(page)
+  await mockMembersApi(page, false) // 404 → householdId stays null
 
   await page.goto('/setup')
 

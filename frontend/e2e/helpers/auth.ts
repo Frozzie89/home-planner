@@ -14,8 +14,9 @@ export const MOCK_MEMBER_ID = 'smoke-member-id'
 
 const PB_URL = 'http://pb.home-planner.localhost'
 
+// householdId routing is controlled by mockMembersApi (404 = no household), not by localStorage
 export async function injectAuth(page: Page, options: { householdId?: string | null } = {}) {
-  const hid = options.householdId !== undefined ? options.householdId : MOCK_HOUSEHOLD_ID
+  void options
   await page.addInitScript(
     ({ token, uid }) => {
       localStorage.setItem(
