@@ -13,7 +13,7 @@ export const useHouseholdStore = defineStore('household', () => {
     id.value = config.id
     name.value = config.name
     currency.value = config.currency
-    split_ratios.value = config.split_ratios
+    split_ratios.value = { ...config.split_ratios }
     reminder_day.value = config.reminder_day
   }
 
