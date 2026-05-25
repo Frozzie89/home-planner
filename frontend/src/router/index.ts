@@ -83,6 +83,11 @@ router.beforeEach(async (to) => {
     return { path: '/setup' }
   }
 
+  // Redirect away from /setup if household already exists (AC #5)
+  if (authStore.householdId && to.path === '/setup') {
+    return { path: '/finances' }
+  }
+
   return true
 })
 
