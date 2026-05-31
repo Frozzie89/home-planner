@@ -88,6 +88,11 @@ router.beforeEach(async (to) => {
     return { path: '/finances' }
   }
 
+  // Admin-only route guard
+  if (to.path === '/settings' && authStore.role !== 'admin') {
+    return { path: '/finances' }
+  }
+
   return true
 })
 
