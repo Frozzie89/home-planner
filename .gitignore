@@ -2,6 +2,7 @@
 _bmad/
 _bmad-output/
 design-artifacts/
+memory/
 # Claude Code settings and skills
 .claude/
 
