@@ -16,6 +16,10 @@ const uiStore = useUiStore()
 const isFinancesActive = computed(() => route.path.startsWith('/finances'))
 const isFoodActive = computed(() => route.path.startsWith('/food'))
 
+async function goTo(path: string) {
+  try { await router.push(path) } catch { /* NavigationFailure — user already on route */ }
+}
+
 const headerButtonLabel = computed(() => {
   if (isFinancesActive.value) return '+ Add expense'
   if (isFoodActive.value) return '+ Add item'
@@ -80,7 +84,7 @@ const headerButtonLabel = computed(() => {
         class="bottom-tab"
         :aria-current="isFinancesActive ? 'page' : undefined"
         :class="{ active: isFinancesActive }"
-        @click="router.push('/finances')"
+        @click="goTo('/finances')"
       >
         <i class="pi pi-wallet" />
         <span>Finances</span>
@@ -89,7 +93,7 @@ const headerButtonLabel = computed(() => {
         class="bottom-tab"
         :aria-current="isFoodActive ? 'page' : undefined"
         :class="{ active: isFoodActive }"
-        @click="router.push('/food/meal-plan')"
+        @click="goTo('/food/meal-plan')"
       >
         <i class="pi pi-shopping-cart" />
         <span>Food</span>
