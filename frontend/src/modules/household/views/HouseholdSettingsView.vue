@@ -131,6 +131,7 @@ async function loadSettings() {
     formData.value.currency = household.currency
     formData.value.reminder_day = household.reminder_day
     members.value = membersList
+    splitRatioForm.value = {}
     for (const member of membersList) {
       splitRatioForm.value[member.id] = household.split_ratios[member.id] ?? 0
     }
@@ -164,14 +165,18 @@ function handleRemoveMemberRequest(member: MemberRecord) {
   showRemoveSheet.value = true
 }
 
+function closeRemoveSheet() {
+  showRemoveSheet.value = false
+  memberToRemove.value = null
+  removeStatus.value = 'idle'
+}
+
 async function handleRemoveConfirm() {
-  if (!memberToRemove.value) return
+  if (!memberToRemove.value || removeStatus.value === 'loading') return
   removeStatus.value = 'loading'
   try {
     await pb.collection('members').delete(memberToRemove.value.id)
-    showRemoveSheet.value = false
-    memberToRemove.value = null
-    removeStatus.value = 'idle'
+    closeRemoveSheet()
     await loadSettings()
     toast.add({ severity: 'success', summary: 'Member removed', life: 3000 })
   } catch {
@@ -206,8 +211,18 @@ async function handleInviteSubmit() {
   if (!validateInviteEmail()) return
   if (!authStore.householdId) return
   inviteStatus.value = 'loading'
-  const emailSnapshot = inviteEmail.value.trim()
+  // Normalize to lowercase so the PB hook's case-sensitive match always succeeds
+  const emailSnapshot = inviteEmail.value.trim().toLowerCase()
   try {
+    const safeEmail = emailSnapshot.replace(/"/g, '\\"')
+    const existing = await pb.collection('invitations').getList(1, 1, {
+      filter: `household_id = "${authStore.householdId}" && invited_email = "${safeEmail}" && accepted = false`,
+    })
+    if (existing.totalItems > 0) {
+      toast.add({ severity: 'info', summary: 'Already invited', detail: `${emailSnapshot} already has a pending invitation.`, life: 4000 })
+      inviteStatus.value = 'idle'
+      return
+    }
     await pb.collection('invitations').create({
       household_id: authStore.householdId,
       invited_email: emailSnapshot,
@@ -219,7 +234,6 @@ async function handleInviteSubmit() {
       detail: `An invitation has been registered for ${emailSnapshot}. They can join after signing in.`,
       life: 5000,
     })
-    inviteStatus.value = 'success'
   } catch {
     toast.add({ severity: 'error', summary: "Couldn't send invitation — try again", life: 5000 })
     inviteStatus.value = 'error'
@@ -404,7 +418,7 @@ async function handleSave() {
       They will lose access immediately.
     </p>
     <div class="sheet-actions">
-      <Button label="Cancel" text @click="showRemoveSheet = false" />
+      <Button label="Cancel" text @click="closeRemoveSheet" />
       <Button
         label="Remove"
         severity="danger"

@@ -11,9 +11,10 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockGetOne, mockGetFullList, mockUpdate, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
+const { mockGetOne, mockGetFullList, mockGetList, mockUpdate, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
   mockGetOne: vi.fn(),
   mockGetFullList: vi.fn(),
+  mockGetList: vi.fn(),
   mockUpdate: vi.fn(),
   mockCreate: vi.fn(),
   mockDelete: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('@/shared/lib/pocketbase', () => ({
     collection: (name: string) => ({
       getOne: name === 'households' ? mockGetOne : vi.fn(),
       getFullList: name === 'members' ? mockGetFullList : vi.fn(),
+      getList: name === 'invitations' ? mockGetList : vi.fn(),
       update: name === 'households' ? mockUpdate : vi.fn(),
       create: name === 'invitations' ? mockCreate : vi.fn(),
       delete: name === 'members' ? mockDelete : vi.fn(),
@@ -157,6 +159,7 @@ describe('HouseholdSettingsView', () => {
     mockGetOne.mockResolvedValue({ ...MOCK_HOUSEHOLD })
     mockGetFullList.mockResolvedValue([...MOCK_MEMBERS])
     mockUpdate.mockResolvedValue({ ...MOCK_HOUSEHOLD })
+    mockGetList.mockResolvedValue({ totalItems: 0, items: [] })
     mockCreate.mockResolvedValue({})
     mockDelete.mockResolvedValue(undefined)
     mockToastAdd.mockReset()
