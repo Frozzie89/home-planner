@@ -13,6 +13,8 @@ import { useAuthStore } from '@/shared/stores/auth'
 import { useHouseholdStore } from '@/modules/household/stores/household'
 import type { Household } from '@/shared/types'
 import type { MemberRecord } from '@/modules/household/types'
+import MemberList from '@/modules/household/components/MemberList.vue'
+import BottomSheet from '@/shared/components/BottomSheet.vue'
 
 const CURRENCY_OPTIONS = [
   { code: 'AUD', label: 'AUD — Australian Dollar' },
@@ -56,6 +58,15 @@ const originalData = ref<{
 } | null>(null)
 
 const nameError = ref('')
+
+// Member management state
+const showInviteSheet = ref(false)
+const showRemoveSheet = ref(false)
+const memberToRemove = ref<MemberRecord | null>(null)
+const inviteEmail = ref('')
+const inviteEmailError = ref('')
+const inviteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+const removeStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
 const splitRatioSum = computed(() =>
   Object.values(splitRatioForm.value).reduce((sum, v) => sum + (v ?? 0), 0)
@@ -147,6 +158,73 @@ watch([formData, splitRatioForm], () => {
     saveStatus.value = 'idle'
   }
 }, { deep: true })
+
+function handleRemoveMemberRequest(member: MemberRecord) {
+  memberToRemove.value = member
+  showRemoveSheet.value = true
+}
+
+async function handleRemoveConfirm() {
+  if (!memberToRemove.value) return
+  removeStatus.value = 'loading'
+  try {
+    await pb.collection('members').delete(memberToRemove.value.id)
+    showRemoveSheet.value = false
+    memberToRemove.value = null
+    removeStatus.value = 'idle'
+    await loadSettings()
+    toast.add({ severity: 'success', summary: 'Member removed', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: "Couldn't remove member — try again", life: 5000 })
+    removeStatus.value = 'error'
+  }
+}
+
+function validateInviteEmail(): boolean {
+  const email = inviteEmail.value.trim()
+  if (!email) {
+    inviteEmailError.value = 'Email is required'
+    return false
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    inviteEmailError.value = 'Please enter a valid email address'
+    return false
+  }
+  inviteEmailError.value = ''
+  return true
+}
+
+function closeInviteSheet() {
+  showInviteSheet.value = false
+  inviteEmail.value = ''
+  inviteEmailError.value = ''
+  inviteStatus.value = 'idle'
+}
+
+async function handleInviteSubmit() {
+  if (!validateInviteEmail()) return
+  if (!authStore.householdId) return
+  inviteStatus.value = 'loading'
+  const emailSnapshot = inviteEmail.value.trim()
+  try {
+    await pb.collection('invitations').create({
+      household_id: authStore.householdId,
+      invited_email: emailSnapshot,
+    })
+    closeInviteSheet()
+    toast.add({
+      severity: 'success',
+      summary: 'Invitation sent',
+      detail: `An invitation has been registered for ${emailSnapshot}. They can join after signing in.`,
+      life: 5000,
+    })
+    inviteStatus.value = 'success'
+  } catch {
+    toast.add({ severity: 'error', summary: "Couldn't send invitation — try again", life: 5000 })
+    inviteStatus.value = 'error'
+  }
+}
 
 async function handleSave() {
   validateName()
@@ -266,6 +344,19 @@ async function handleSave() {
           />
         </div>
 
+        <p class="section-label">MEMBERS</p>
+        <MemberList
+          :members="members"
+          :current-user-id="authStore.userId ?? ''"
+          @remove="handleRemoveMemberRequest"
+        />
+        <Button
+          label="Invite member"
+          class="invite-btn"
+          outlined
+          @click="showInviteSheet = true"
+        />
+
         <Button
           label="Save Changes"
           class="save-btn"
@@ -283,6 +374,46 @@ async function handleSave() {
       </p>
     </template>
   </div>
+  <BottomSheet v-model:open="showInviteSheet" title="Invite member">
+    <div class="form-field">
+      <label for="invite-email">Email address</label>
+      <InputText
+        id="invite-email"
+        v-model="inviteEmail"
+        type="email"
+        placeholder="name@example.com"
+        :class="{ 'p-invalid': inviteEmailError }"
+        @blur="validateInviteEmail"
+      />
+      <small v-if="inviteEmailError" class="field-error">{{ inviteEmailError }}</small>
+    </div>
+    <div class="sheet-actions">
+      <Button label="Cancel" text @click="closeInviteSheet" />
+      <Button
+        label="Send invite"
+        :disabled="!inviteEmail.trim() || !!inviteEmailError"
+        :loading="inviteStatus === 'loading'"
+        @click="handleInviteSubmit"
+      />
+    </div>
+  </BottomSheet>
+
+  <BottomSheet v-model:open="showRemoveSheet" title="Remove member">
+    <p class="confirm-text">
+      Remove <strong>{{ memberToRemove ? (memberToRemove.expand?.user_id?.name || memberToRemove.expand?.user_id?.email || 'this member') : '' }}</strong> from the household?
+      They will lose access immediately.
+    </p>
+    <div class="sheet-actions">
+      <Button label="Cancel" text @click="showRemoveSheet = false" />
+      <Button
+        label="Remove"
+        severity="danger"
+        :loading="removeStatus === 'loading'"
+        @click="handleRemoveConfirm"
+      />
+    </div>
+  </BottomSheet>
+
   <Toast />
 </template>
 
@@ -418,6 +549,25 @@ async function handleSave() {
 
 .mb-3 {
   margin-bottom: 0.75rem;
+}
+
+.invite-btn {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.sheet-actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+.confirm-text {
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.5;
 }
 
 @media (min-width: 768px) {
