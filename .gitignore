@@ -16,3 +16,7 @@ pocketbase/pb_data/
 frontend/dist/
 frontend/.env
 frontend/node_modules/
+
+# Playwright test artifacts
+playwright-report/
+frontend/test-results/
