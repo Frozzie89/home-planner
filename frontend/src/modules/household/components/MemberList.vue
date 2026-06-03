@@ -27,6 +27,7 @@ function getMemberName(member: MemberRecord): string {
       <button
         v-if="member.user_id !== props.currentUserId"
         class="remove-btn"
+        :aria-label="`Remove ${getMemberName(member)}`"
         @click="emit('remove', member)"
       >
         Remove
