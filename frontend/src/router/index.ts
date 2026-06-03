@@ -64,7 +64,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
-  if (!authStore.isAuthenticated && pb.authStore.isValid && (authStore.initStatus === 'idle' || authStore.initStatus === 'error')) {
+  if (authStore.initStatus !== 'success') {
     await authStore.init()
   }
 
