@@ -24,5 +24,8 @@ test('finances view renders without WCAG 2.1 AA violations', async ({ page }) =>
   await page.waitForLoadState('networkidle')
 
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
-  expect(results.violations).toEqual([])
+  expect(
+    results.violations,
+    results.violations.map(v => `[${v.id}] ${v.description}\n  ${v.nodes.map(n => n.html).join('\n  ')}`).join('\n'),
+  ).toEqual([])
 })

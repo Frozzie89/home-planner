@@ -107,22 +107,96 @@ describe('useAuthStore', () => {
       expect(store.initStatus).toBe('error')
     })
 
-    it('is a no-op when already loading (concurrency guard)', async () => {
+    it('is a no-op when already loading: both callers await full completion', async () => {
       mockAuthStore.isValid = true
       mockAuthStore.record = { id: 'user-123' }
-      mockGetFirstListItem.mockRejectedValueOnce({ status: 404 })
+      mockGetFirstListItem.mockResolvedValueOnce({
+        id: 'member-1',
+        household_id: 'hh-456',
+        user_id: 'user-123',
+        role: 'admin',
+        created: '',
+        updated: '',
+      })
 
       const store = useAuthStore()
       const first = store.init()
       const second = store.init()
       await Promise.all([first, second])
 
+      // Only one fetch — concurrent call reuses in-flight promise
       expect(mockGetFirstListItem).toHaveBeenCalledTimes(1)
+      // Both callers get the fully resolved state (not stale null)
+      expect(store.householdId).toBe('hh-456')
+      expect(store.initStatus).toBe('success')
+    })
+
+    it('is a no-op when initStatus is already success', async () => {
+      mockAuthStore.isValid = true
+      mockAuthStore.record = { id: 'user-123' }
+      mockGetFirstListItem.mockResolvedValueOnce({
+        id: 'member-1',
+        household_id: 'hh-456',
+        user_id: 'user-123',
+        role: 'admin',
+        created: '',
+        updated: '',
+      })
+
+      const store = useAuthStore()
+      await store.init()
+      await store.init() // second call after success
+
+      expect(mockGetFirstListItem).toHaveBeenCalledTimes(1)
+    })
+
+    it('concurrent callers both await full membership resolution', async () => {
+      mockAuthStore.isValid = true
+      mockAuthStore.record = { id: 'user-123' }
+      mockGetFirstListItem.mockResolvedValueOnce({
+        id: 'member-1',
+        household_id: 'hh-456',
+        user_id: 'user-123',
+        role: 'admin',
+        created: '',
+        updated: '',
+      })
+
+      const store = useAuthStore()
+      await Promise.all([store.init(), store.init()])
+
+      expect(store.householdId).toBe('hh-456')
+      expect(store.initStatus).toBe('success')
+      expect(mockGetFirstListItem).toHaveBeenCalledTimes(1)
+    })
+
+    it('retries and recovers after a prior error', async () => {
+      mockAuthStore.isValid = true
+      mockAuthStore.record = { id: 'user-123' }
+      mockGetFirstListItem.mockRejectedValueOnce({ status: 500 })
+
+      const store = useAuthStore()
+      await store.init()
+      expect(store.initStatus).toBe('error')
+
+      mockGetFirstListItem.mockResolvedValueOnce({
+        id: 'member-1',
+        household_id: 'hh-456',
+        user_id: 'user-123',
+        role: 'admin',
+        created: '',
+        updated: '',
+      })
+      await store.init()
+
+      expect(store.householdId).toBe('hh-456')
+      expect(store.initStatus).toBe('success')
+      expect(mockGetFirstListItem).toHaveBeenCalledTimes(2)
     })
   })
 
   describe('onOAuth2Success()', () => {
-    it('sets isAuthenticated and userId from pb.authStore.record', async () => {
+    it('sets isAuthenticated, userId, and initStatus from pb.authStore.record', async () => {
       mockAuthStore.isValid = true
       mockAuthStore.record = { id: 'user-456' }
       mockGetFirstListItem.mockRejectedValueOnce({ status: 404 })
@@ -132,6 +206,7 @@ describe('useAuthStore', () => {
 
       expect(store.isAuthenticated).toBe(true)
       expect(store.userId).toBe('user-456')
+      expect(store.initStatus).toBe('success')
     })
 
     it('sets householdId when member record exists', async () => {

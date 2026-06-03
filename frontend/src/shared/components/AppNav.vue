@@ -163,7 +163,7 @@ const headerButtonLabel = computed(() => {
   justify-content: center;
   min-height: 48px;
   padding: 0 var(--space-2);
-  background-color: var(--p-primary-color);
+  background-color: var(--p-primary-hover-color);
   color: var(--p-primary-contrast-color);
   border: none;
   border-radius: 8px;
@@ -173,7 +173,7 @@ const headerButtonLabel = computed(() => {
 }
 
 .header-add-btn:hover {
-  background-color: var(--p-primary-hover-color);
+  background-color: var(--p-primary-active-color);
 }
 
 /* Top nav — hidden on mobile, shown on desktop */
@@ -193,7 +193,7 @@ const headerButtonLabel = computed(() => {
 }
 
 .top-nav-link.active {
-  color: var(--p-primary-color);
+  color: var(--color-text-primary);
   border-bottom-color: var(--p-primary-color);
 }
 

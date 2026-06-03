@@ -10,20 +10,32 @@ export const useAuthStore = defineStore('auth', () => {
   const role = ref<'member' | 'admin' | null>(null)
   const initStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
-  async function init() {
-    if (initStatus.value === 'loading') return
-    initStatus.value = 'loading'
-    try {
-      if (pb.authStore.isValid && pb.authStore.record) {
-        isAuthenticated.value = true
-        userId.value = pb.authStore.record.id
-        await loadMembership()
+  let _initPromise: Promise<void> | null = null
+
+  async function init(): Promise<void> {
+    if (initStatus.value === 'success') return
+    if (_initPromise) return _initPromise
+
+    _initPromise = (async () => {
+      initStatus.value = 'loading'
+      try {
+        if (pb.authStore.isValid && pb.authStore.record) {
+          isAuthenticated.value = true
+          userId.value = pb.authStore.record.id
+          await loadMembership()
+        }
+        initStatus.value = 'success'
+      } catch {
+        isAuthenticated.value = false
+        userId.value = null
+        initStatus.value = 'error'
       }
-      initStatus.value = 'success'
-    } catch {
-      isAuthenticated.value = false
-      userId.value = null
-      initStatus.value = 'error'
+    })()
+
+    try {
+      await _initPromise
+    } finally {
+      _initPromise = null
     }
   }
 
@@ -53,6 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated.value = true
     userId.value = pb.authStore.record.id
     await loadMembership()
+    initStatus.value = 'success'
   }
 
   function logout() {
