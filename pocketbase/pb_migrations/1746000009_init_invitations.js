@@ -20,9 +20,10 @@ migrate((app) => {
         "cascadeDelete": true
       },
       {
-        "name": "invited_email",
+        "name": "token",
         "type": "text",
-        "required": true
+        "required": true,
+        "min": 32
       },
       {
         "name": "accepted",
