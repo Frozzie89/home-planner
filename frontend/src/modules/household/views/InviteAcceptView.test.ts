@@ -2,9 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 
-const { mockSend, mockListAuthMethods } = vi.hoisted(() => ({
+const { mockSend, mockListAuthMethods, mockAuthStore } = vi.hoisted(() => ({
   mockSend: vi.fn(),
   mockListAuthMethods: vi.fn(),
+  mockAuthStore: {
+    clear: vi.fn(),
+    isValid: false,
+    record: null,
+  },
 }))
 
 vi.mock('@/shared/lib/pocketbase', () => ({
@@ -13,6 +18,7 @@ vi.mock('@/shared/lib/pocketbase', () => ({
     collection: (_name: string) => ({
       listAuthMethods: mockListAuthMethods,
     }),
+    authStore: mockAuthStore,
   },
 }))
 
@@ -51,6 +57,7 @@ describe('InviteAcceptView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    mockAuthStore.isValid = false
     localStorage.clear()
     sessionStorage.clear()
     mockListAuthMethods.mockResolvedValue({ oauth2: { providers: [...MOCK_PROVIDERS] } })
@@ -99,6 +106,22 @@ describe('InviteAcceptView', () => {
 
     expect(localStorage.getItem('pending_invite_token')).toBe('test-token-abc123')
     assignSpy.mockRestore()
+  })
+
+  it('clears existing session on mount when user is already authenticated', async () => {
+    mockAuthStore.isValid = true
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
+    mountView()
+    await flushPromises()
+    expect(mockAuthStore.clear).toHaveBeenCalled()
+  })
+
+  it('does not call clear when no session exists on mount', async () => {
+    mockAuthStore.isValid = false
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
+    mountView()
+    await flushPromises()
+    expect(mockAuthStore.clear).not.toHaveBeenCalled()
   })
 
   it('shows error message when loadProviders fails', async () => {

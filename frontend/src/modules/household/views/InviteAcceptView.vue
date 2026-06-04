@@ -34,6 +34,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { pb } from '@/shared/lib/pocketbase'
+import { useAuthStore } from '@/shared/stores/auth'
 
 interface OAuth2Provider {
   name: string
@@ -43,6 +44,7 @@ interface OAuth2Provider {
 }
 
 const route = useRoute()
+const authStore = useAuthStore()
 
 const viewState = ref<'validating' | 'valid' | 'invalid'>('validating')
 const householdName = ref('')
@@ -95,6 +97,12 @@ onMounted(async () => {
   if (!token) {
     viewState.value = 'invalid'
     return
+  }
+  // Clear any existing session before the invite flow starts. This ensures the
+  // router guard on /auth won't redirect away from the OAuth callback, and that
+  // the OAuth exchange authenticates the invitee rather than the current user.
+  if (pb.authStore.isValid) {
+    authStore.logout()
   }
   await validateToken(token)
 })
