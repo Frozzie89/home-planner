@@ -7,6 +7,7 @@ const props = defineProps<{
 }>()
 
 const sheetRef = ref<HTMLElement | null>(null)
+let _triggerElement: HTMLElement | null = null
 
 // --- Visual viewport tracking (keeps sheet above the keyboard on mobile) ---
 const vpHeight = ref(typeof window !== 'undefined' ? (window.visualViewport?.height ?? window.innerHeight) : 600)
@@ -65,12 +66,18 @@ const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]
 const isTouch = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)')?.matches
 
 watch(open, async (isOpen) => {
-  if (isOpen && !isTouch) {
-    await nextTick()
-    // Scope to .sheet-body so the close button (in .sheet-header) is not focused first
-    const body = sheetRef.value?.querySelector<HTMLElement>('.sheet-body')
-    const focusable = (body ?? sheetRef.value)?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
-    focusable?.focus()
+  if (isOpen) {
+    _triggerElement = document.activeElement as HTMLElement
+    if (!isTouch) {
+      await nextTick()
+      // Scope to .sheet-body so the close button (in .sheet-header) is not focused first
+      const body = sheetRef.value?.querySelector<HTMLElement>('.sheet-body')
+      const focusable = (body ?? sheetRef.value)?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+      focusable?.focus()
+    }
+  } else {
+    _triggerElement?.focus()
+    _triggerElement = null
   }
 })
 </script>

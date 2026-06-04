@@ -11,9 +11,10 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockGetOne, mockGetFullList, mockUpdate, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
+const { mockGetOne, mockGetFullList, mockGetFirstListItem, mockUpdate, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
   mockGetOne: vi.fn(),
   mockGetFullList: vi.fn(),
+  mockGetFirstListItem: vi.fn(),
   mockUpdate: vi.fn(),
   mockCreate: vi.fn(),
   mockDelete: vi.fn(),
@@ -25,9 +26,15 @@ const { mockGetOne, mockGetFullList, mockUpdate, mockCreate, mockDelete, mockToa
 
 vi.mock('@/shared/lib/pocketbase', () => ({
   pb: {
+    filter: (expr: string, params: Record<string, unknown>) => {
+      return Object.entries(params).reduce(
+        (s, [k, v]) => s.replace(`{:${k}}`, String(v)), expr
+      )
+    },
     collection: (name: string) => ({
       getOne: name === 'households' ? mockGetOne : vi.fn(),
       getFullList: name === 'members' ? mockGetFullList : vi.fn(),
+      getFirstListItem: name === 'invitations' ? mockGetFirstListItem : vi.fn(),
       update: name === 'households' ? mockUpdate : vi.fn(),
       create: name === 'invitations' ? mockCreate : vi.fn(),
       delete: name === 'members' ? mockDelete : vi.fn(),
@@ -154,10 +161,18 @@ function mountView() {
 describe('HouseholdSettingsView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    mockGetOne.mockReset()
     mockGetOne.mockResolvedValue({ ...MOCK_HOUSEHOLD })
+    mockGetFullList.mockReset()
     mockGetFullList.mockResolvedValue([...MOCK_MEMBERS])
+    // Default: no existing invite (404) — handleInviteOpen falls through to create
+    mockGetFirstListItem.mockReset()
+    mockGetFirstListItem.mockRejectedValue({ status: 404 })
+    mockUpdate.mockReset()
     mockUpdate.mockResolvedValue({ ...MOCK_HOUSEHOLD })
+    mockCreate.mockReset()
     mockCreate.mockResolvedValue({ id: 'invite-1', token: 'abc123testtoken456789012345678901', household_id: 'hh-test' })
+    mockDelete.mockReset()
     mockDelete.mockResolvedValue(undefined)
     mockToastAdd.mockReset()
     mockPopulate.mockReset()
@@ -354,7 +369,21 @@ describe('HouseholdSettingsView', () => {
     expect(input.value).toContain('/invite/abc123testtoken456789012345678901')
   })
 
+  it('reuses existing unaccepted invite instead of creating a new one', async () => {
+    mockGetFirstListItem.mockResolvedValue({ id: 'existing-invite', token: 'existingtoken12345678901234567890', household_id: 'hh-test' })
+    const wrapper = mountView()
+    await flushPromises()
+    const btn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
+    await btn!.trigger('click')
+    await flushPromises()
+    expect(mockCreate).not.toHaveBeenCalled()
+    const input = wrapper.find('#invite-link').element as HTMLInputElement
+    expect(input.value).toContain('/invite/existingtoken12345678901234567890')
+  })
+
   it('shows error Toast when invite create fails and does not open sheet', async () => {
+    // getFirstListItem returns 404 (no existing invite) so it falls through to create
+    mockGetFirstListItem.mockRejectedValue({ status: 404 })
     mockCreate.mockRejectedValue(new Error('Network error'))
     const wrapper = mountView()
     await flushPromises()

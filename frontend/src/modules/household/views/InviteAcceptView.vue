@@ -15,7 +15,10 @@
       >
         Sign in with {{ capitalise(provider.name) }} to join
       </button>
-      <div v-if="providers.length === 0 && providersStatus === 'success'" class="invite-error">
+      <div v-if="providersStatus === 'error'" class="invite-error">
+        <p>Unable to load sign-in options. Please refresh the page and try again.</p>
+      </div>
+      <div v-else-if="providers.length === 0 && providersStatus === 'success'" class="invite-error">
         <p>No sign-in providers are available. Please contact the household admin.</p>
       </div>
     </div>

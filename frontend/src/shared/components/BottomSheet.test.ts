@@ -112,6 +112,42 @@ describe('BottomSheet', () => {
     expect(wrapper.emitted('update:open')).toBeFalsy()
   })
 
+  it('Tab from last focusable element wraps to first', async () => {
+    wrapper = mount(BottomSheet, {
+      props: { open: true, title: 'Trap Test' },
+      slots: { default: '<button id="btn-a">A</button><button id="btn-b">B</button>' },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    // The sheet has: close button (header) + btn-a + btn-b
+    const focusable = Array.from(
+      document.body.querySelectorAll<HTMLElement>('button:not([disabled])')
+    )
+    const last = focusable[focusable.length - 1]!
+    last.focus()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+    await flushPromises()
+    // focus should have moved to the first focusable element
+    expect(document.activeElement).toBe(focusable[0])
+  })
+
+  it('Shift+Tab from first focusable element wraps to last', async () => {
+    wrapper = mount(BottomSheet, {
+      props: { open: true, title: 'Trap Test' },
+      slots: { default: '<button id="btn-a">A</button><button id="btn-b">B</button>' },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    const focusable = Array.from(
+      document.body.querySelectorAll<HTMLElement>('button:not([disabled])')
+    )
+    const first = focusable[0]!
+    first.focus()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }))
+    await flushPromises()
+    expect(document.activeElement).toBe(focusable[focusable.length - 1])
+  })
+
   it('close button emits update:open false', async () => {
     wrapper = mount(BottomSheet, {
       props: { open: true, title: 'With Header' },

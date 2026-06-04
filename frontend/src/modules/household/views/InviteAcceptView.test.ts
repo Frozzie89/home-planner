@@ -101,6 +101,15 @@ describe('InviteAcceptView', () => {
     assignSpy.mockRestore()
   })
 
+  it('shows error message when loadProviders fails', async () => {
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
+    mockListAuthMethods.mockRejectedValue(new Error('network error'))
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Unable to load sign-in options')
+    expect(wrapper.find('.auth-provider-btn').exists()).toBe(false)
+  })
+
   it('stores oauth provider in sessionStorage on sign-in click', async () => {
     mockSend.mockResolvedValue({ householdName: 'The Jolys' })
     Object.defineProperty(window, 'location', {

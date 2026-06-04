@@ -66,6 +66,7 @@ const memberToRemove = ref<MemberRecord | null>(null)
 const inviteLink = ref('')
 const inviteCopied = ref(false)
 const inviteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+let inviteCopiedTimer: ReturnType<typeof setTimeout> | null = null
 const removeStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
 const splitRatioSum = computed(() =>
@@ -190,16 +191,32 @@ function closeInviteSheet() {
   inviteLink.value = ''
   inviteCopied.value = false
   inviteStatus.value = 'idle'
+  if (inviteCopiedTimer !== null) {
+    clearTimeout(inviteCopiedTimer)
+    inviteCopiedTimer = null
+  }
 }
 
 async function handleInviteOpen() {
   if (!authStore.householdId) return
   inviteStatus.value = 'loading'
   try {
-    const record = await pb.collection('invitations').create({
-      household_id: authStore.householdId,
-    })
-    inviteLink.value = `${window.location.origin}/invite/${record['token']}`
+    // Reuse an existing unaccepted invite to avoid accumulating orphaned tokens
+    let token: string
+    try {
+      const existing = await pb.collection('invitations').getFirstListItem<{ token: string }>(
+        pb.filter('household_id = {:hid} && accepted = false', { hid: authStore.householdId })
+      )
+      token = existing['token']
+    } catch (e: any) {
+      if (e?.status !== 404) throw e
+      // No existing invite — create one
+      const record = await pb.collection('invitations').create<{ token: string }>({
+        household_id: authStore.householdId,
+      })
+      token = record['token']
+    }
+    inviteLink.value = `${window.location.origin}/invite/${token}`
     inviteStatus.value = 'success'
     showInviteSheet.value = true
   } catch {
@@ -212,7 +229,8 @@ async function copyInviteLink() {
   try {
     await navigator.clipboard.writeText(inviteLink.value)
     inviteCopied.value = true
-    setTimeout(() => { inviteCopied.value = false }, 1500)
+    if (inviteCopiedTimer !== null) clearTimeout(inviteCopiedTimer)
+    inviteCopiedTimer = setTimeout(() => { inviteCopied.value = false; inviteCopiedTimer = null }, 1500)
   } catch {
     // clipboard may be unavailable in some environments
   }
