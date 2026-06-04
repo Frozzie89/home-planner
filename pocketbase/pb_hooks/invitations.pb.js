@@ -85,17 +85,19 @@ routerAdd('POST', '/api/accept-invite', (e) => {
       return e.json(409, { message: 'Already a member of this household' })
     }
 
-    // Create member record
+    // Create member record and mark invitation accepted atomically
     const membersCol = $app.findCollectionByNameOrId('members')
     const member = new Record(membersCol)
     member.set('household_id', householdId)
     member.set('user_id', userId)
     member.set('role', 'member')
-    $app.save(member)
 
-    // Mark invitation as accepted to prevent reuse
     invite.set('accepted', true)
-    $app.save(invite)
+
+    $app.runInTransaction((txApp) => {
+      txApp.save(member)
+      txApp.save(invite)
+    })
 
     return e.json(200, { message: 'Welcome to the household' })
   } catch (err) {
