@@ -31,6 +31,10 @@
         </button>
       </div>
     </div>
+
+    <div v-if="inviteErrorMessage" class="auth-error invite-error">
+      <p>{{ inviteErrorMessage }}</p>
+    </div>
   </div>
 </template>
 
@@ -54,6 +58,7 @@ const callbackStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 const providersStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 const providers = ref<OAuth2Provider[]>([])
 const errorMessage = ref('')
+const inviteErrorMessage = ref('')
 
 function capitalise(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1)
@@ -113,6 +118,21 @@ async function handleCallback(code: string, state: string) {
 
     await authStore.onOAuth2Success()
     callbackStatus.value = 'success'
+
+    // Check for a pending invite token stored before the OAuth2 redirect
+    const pendingToken = localStorage.getItem('pending_invite_token')
+    if (pendingToken) {
+      try {
+        await pb.send('/api/accept-invite', { method: 'POST', body: { token: pendingToken } })
+        localStorage.removeItem('pending_invite_token')
+        router.replace('/finances')
+      } catch {
+        localStorage.removeItem('pending_invite_token')
+        inviteErrorMessage.value = 'Your invitation could not be accepted. The link may have already been used.'
+        router.replace('/setup')
+      }
+      return
+    }
 
     if (authStore.householdId) {
       router.replace('/finances')

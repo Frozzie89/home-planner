@@ -63,8 +63,8 @@ const nameError = ref('')
 const showInviteSheet = ref(false)
 const showRemoveSheet = ref(false)
 const memberToRemove = ref<MemberRecord | null>(null)
-const inviteEmail = ref('')
-const inviteEmailError = ref('')
+const inviteLink = ref('')
+const inviteCopied = ref(false)
 const inviteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 const removeStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
@@ -185,58 +185,36 @@ async function handleRemoveConfirm() {
   }
 }
 
-function validateInviteEmail(): boolean {
-  const email = inviteEmail.value.trim()
-  if (!email) {
-    inviteEmailError.value = 'Email is required'
-    return false
-  }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(email)) {
-    inviteEmailError.value = 'Please enter a valid email address'
-    return false
-  }
-  inviteEmailError.value = ''
-  return true
-}
-
 function closeInviteSheet() {
   showInviteSheet.value = false
-  inviteEmail.value = ''
-  inviteEmailError.value = ''
+  inviteLink.value = ''
+  inviteCopied.value = false
   inviteStatus.value = 'idle'
 }
 
-async function handleInviteSubmit() {
-  if (!validateInviteEmail()) return
+async function handleInviteOpen() {
   if (!authStore.householdId) return
   inviteStatus.value = 'loading'
-  // Normalize to lowercase so the PB hook's case-sensitive match always succeeds
-  const emailSnapshot = inviteEmail.value.trim().toLowerCase()
   try {
-    const safeEmail = emailSnapshot.replace(/"/g, '\\"')
-    const existing = await pb.collection('invitations').getList(1, 1, {
-      filter: `household_id = "${authStore.householdId}" && invited_email = "${safeEmail}" && accepted = false`,
-    })
-    if (existing.totalItems > 0) {
-      toast.add({ severity: 'info', summary: 'Already invited', detail: `${emailSnapshot} already has a pending invitation.`, life: 4000 })
-      inviteStatus.value = 'idle'
-      return
-    }
-    await pb.collection('invitations').create({
+    const record = await pb.collection('invitations').create({
       household_id: authStore.householdId,
-      invited_email: emailSnapshot,
     })
-    closeInviteSheet()
-    toast.add({
-      severity: 'success',
-      summary: 'Invitation sent',
-      detail: `An invitation has been registered for ${emailSnapshot}. They can join after signing in.`,
-      life: 5000,
-    })
+    inviteLink.value = `${window.location.origin}/invite/${record['token']}`
+    inviteStatus.value = 'success'
+    showInviteSheet.value = true
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't send invitation — try again", life: 5000 })
+    toast.add({ severity: 'error', summary: "Couldn't generate invite link — try again", life: 5000 })
     inviteStatus.value = 'error'
+  }
+}
+
+async function copyInviteLink() {
+  try {
+    await navigator.clipboard.writeText(inviteLink.value)
+    inviteCopied.value = true
+    setTimeout(() => { inviteCopied.value = false }, 1500)
+  } catch {
+    // clipboard may be unavailable in some environments
   }
 }
 
@@ -368,7 +346,8 @@ async function handleSave() {
           label="Invite member"
           class="invite-btn"
           outlined
-          @click="showInviteSheet = true"
+          :loading="inviteStatus === 'loading'"
+          @click="handleInviteOpen"
         />
 
         <Button
@@ -390,25 +369,20 @@ async function handleSave() {
   </div>
   <BottomSheet v-model:open="showInviteSheet" title="Invite member">
     <div class="form-field">
-      <label for="invite-email">Email address</label>
+      <label for="invite-link">Share this link</label>
       <InputText
-        id="invite-email"
-        v-model="inviteEmail"
-        type="email"
-        placeholder="name@example.com"
-        :class="{ 'p-invalid': inviteEmailError }"
-        @blur="validateInviteEmail"
+        id="invite-link"
+        :model-value="inviteLink"
+        readonly
       />
-      <small v-if="inviteEmailError" class="field-error">{{ inviteEmailError }}</small>
     </div>
     <div class="sheet-actions">
-      <Button label="Cancel" text @click="closeInviteSheet" />
       <Button
-        label="Send invite"
-        :disabled="!inviteEmail.trim() || !!inviteEmailError"
-        :loading="inviteStatus === 'loading'"
-        @click="handleInviteSubmit"
+        :label="inviteCopied ? 'Copied!' : 'Copy link'"
+        outlined
+        @click="copyInviteLink"
       />
+      <Button label="Done" @click="closeInviteSheet" />
     </div>
   </BottomSheet>
 

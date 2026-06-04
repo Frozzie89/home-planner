@@ -19,6 +19,12 @@ const router = createRouter({
       component: () => import('../modules/household/views/AuthView.vue'),
     },
     {
+      path: '/invite/:token',
+      name: 'invite-accept',
+      meta: { public: true, shellExcluded: true },
+      component: () => import('../modules/household/views/InviteAcceptView.vue'),
+    },
+    {
       path: '/setup',
       name: 'setup',
       meta: { shellExcluded: true },

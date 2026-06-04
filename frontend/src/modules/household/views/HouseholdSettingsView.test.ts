@@ -11,10 +11,9 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockGetOne, mockGetFullList, mockGetList, mockUpdate, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
+const { mockGetOne, mockGetFullList, mockUpdate, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
   mockGetOne: vi.fn(),
   mockGetFullList: vi.fn(),
-  mockGetList: vi.fn(),
   mockUpdate: vi.fn(),
   mockCreate: vi.fn(),
   mockDelete: vi.fn(),
@@ -29,7 +28,6 @@ vi.mock('@/shared/lib/pocketbase', () => ({
     collection: (name: string) => ({
       getOne: name === 'households' ? mockGetOne : vi.fn(),
       getFullList: name === 'members' ? mockGetFullList : vi.fn(),
-      getList: name === 'invitations' ? mockGetList : vi.fn(),
       update: name === 'households' ? mockUpdate : vi.fn(),
       create: name === 'invitations' ? mockCreate : vi.fn(),
       delete: name === 'members' ? mockDelete : vi.fn(),
@@ -159,8 +157,7 @@ describe('HouseholdSettingsView', () => {
     mockGetOne.mockResolvedValue({ ...MOCK_HOUSEHOLD })
     mockGetFullList.mockResolvedValue([...MOCK_MEMBERS])
     mockUpdate.mockResolvedValue({ ...MOCK_HOUSEHOLD })
-    mockGetList.mockResolvedValue({ totalItems: 0, items: [] })
-    mockCreate.mockResolvedValue({})
+    mockCreate.mockResolvedValue({ id: 'invite-1', token: 'abc123testtoken456789012345678901', household_id: 'hh-test' })
     mockDelete.mockResolvedValue(undefined)
     mockToastAdd.mockReset()
     mockPopulate.mockReset()
@@ -336,93 +333,39 @@ describe('HouseholdSettingsView', () => {
     expect(btn?.exists()).toBe(true)
   })
 
-  it('clicking "Invite member" opens the invite BottomSheet', async () => {
+  it('clicking "Invite member" calls pb.collection("invitations").create() with household_id', async () => {
     const wrapper = mountView()
     await flushPromises()
     const btn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
     await btn!.trigger('click')
-    await wrapper.vm.$nextTick()
+    await flushPromises()
+    expect(mockCreate).toHaveBeenCalledWith({ household_id: 'hh-test' })
+  })
+
+  it('opens invite sheet with the generated link after create succeeds', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    const btn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
+    await btn!.trigger('click')
+    await flushPromises()
     expect(wrapper.find('.bottom-sheet-stub[data-title="Invite member"]').exists()).toBe(true)
+    expect(wrapper.find('#invite-link').exists()).toBe(true)
+    const input = wrapper.find('#invite-link').element as HTMLInputElement
+    expect(input.value).toContain('/invite/abc123testtoken456789012345678901')
   })
 
-  it('invite form shows email validation error on blur when empty', async () => {
-    const wrapper = mountView()
-    await flushPromises()
-    // open invite sheet
-    const inviteBtn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
-    await inviteBtn!.trigger('click')
-    await wrapper.vm.$nextTick()
-    // trigger blur on email input
-    const emailInput = wrapper.find('#invite-email')
-    await emailInput.trigger('blur')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.text()).toContain('Email is required')
-  })
-
-  it('invite form shows error for invalid email format on blur', async () => {
-    const wrapper = mountView()
-    await flushPromises()
-    const inviteBtn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
-    await inviteBtn!.trigger('click')
-    await wrapper.vm.$nextTick()
-    const emailInput = wrapper.find('#invite-email')
-    await emailInput.setValue('not-an-email')
-    await emailInput.trigger('blur')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.text()).toContain('Please enter a valid email address')
-  })
-
-  it('calls pb.collection("invitations").create() with correct payload on submit', async () => {
-    const wrapper = mountView()
-    await flushPromises()
-    const inviteBtn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
-    await inviteBtn!.trigger('click')
-    await wrapper.vm.$nextTick()
-    const emailInput = wrapper.find('#invite-email')
-    await emailInput.setValue('new@example.com')
-    await wrapper.vm.$nextTick()
-    const submitBtn = wrapper.findAll('button').find(b => b.text() === 'Send invite')
-    await submitBtn!.trigger('click')
-    await flushPromises()
-    expect(mockCreate).toHaveBeenCalledWith({
-      household_id: 'hh-test',
-      invited_email: 'new@example.com',
-    })
-  })
-
-  it('shows success Toast after successful invite', async () => {
-    const wrapper = mountView()
-    await flushPromises()
-    const inviteBtn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
-    await inviteBtn!.trigger('click')
-    await wrapper.vm.$nextTick()
-    await wrapper.find('#invite-email').setValue('new@example.com')
-    await wrapper.vm.$nextTick()
-    const submitBtn = wrapper.findAll('button').find(b => b.text() === 'Send invite')
-    await submitBtn!.trigger('click')
-    await flushPromises()
-    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({
-      severity: 'success',
-      summary: 'Invitation sent',
-    }))
-  })
-
-  it('shows error Toast when invite create fails', async () => {
+  it('shows error Toast when invite create fails and does not open sheet', async () => {
     mockCreate.mockRejectedValue(new Error('Network error'))
     const wrapper = mountView()
     await flushPromises()
     const inviteBtn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
     await inviteBtn!.trigger('click')
-    await wrapper.vm.$nextTick()
-    await wrapper.find('#invite-email').setValue('new@example.com')
-    await wrapper.vm.$nextTick()
-    const submitBtn = wrapper.findAll('button').find(b => b.text() === 'Send invite')
-    await submitBtn!.trigger('click')
     await flushPromises()
     expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({
       severity: 'error',
-      summary: "Couldn't send invitation — try again",
+      summary: "Couldn't generate invite link — try again",
     }))
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Invite member"]').exists()).toBe(false)
   })
 
   it('@remove event from MemberList opens remove confirmation BottomSheet', async () => {
