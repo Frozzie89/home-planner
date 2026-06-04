@@ -45,9 +45,7 @@ routerAdd('GET', '/api/invite/{token}', (e) => {
 /// Handler C — POST /api/accept-invite  (requires authenticated user)
 routerAdd('POST', '/api/accept-invite', (e) => {
   try {
-    const data = {}
-    e.bindBody(data)
-    const token = data['token']
+    const token = e.requestInfo().body['token']
     if (!token) {
       return e.json(400, { message: 'Token is required' })
     }
@@ -85,19 +83,17 @@ routerAdd('POST', '/api/accept-invite', (e) => {
       return e.json(409, { message: 'Already a member of this household' })
     }
 
-    // Create member record and mark invitation accepted atomically
+    // Create member record and mark invitation accepted
     const membersCol = $app.findCollectionByNameOrId('members')
     const member = new Record(membersCol)
     member.set('household_id', householdId)
     member.set('user_id', userId)
     member.set('role', 'member')
 
-    invite.set('accepted', true)
+    $app.save(member)
 
-    $app.runInTransaction((txApp) => {
-      txApp.save(member)
-      txApp.save(invite)
-    })
+    invite.set('accepted', true)
+    $app.save(invite)
 
     return e.json(200, { message: 'Welcome to the household' })
   } catch (err) {
