@@ -77,5 +77,5 @@ export const useAuthStore = defineStore('auth', () => {
     initStatus.value = 'idle'
   }
 
-  return { isAuthenticated, userId, householdId, role, initStatus, init, onOAuth2Success, logout }
+  return { isAuthenticated, userId, householdId, role, initStatus, init, onOAuth2Success, loadMembership, logout }
 })

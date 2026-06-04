@@ -19,6 +19,12 @@ const router = createRouter({
       component: () => import('../modules/household/views/AuthView.vue'),
     },
     {
+      path: '/invite/:token',
+      name: 'invite-accept',
+      meta: { public: true, shellExcluded: true },
+      component: () => import('../modules/household/views/InviteAcceptView.vue'),
+    },
+    {
       path: '/setup',
       name: 'setup',
       meta: { shellExcluded: true },
@@ -69,6 +75,8 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.public) {
+    // Invite-accept route must always be reachable so authenticated users can join a household
+    if (to.name === 'invite-accept') return true
     if (pb.authStore.isValid) {
       return authStore.householdId ? { path: '/finances' } : { path: '/setup' }
     }

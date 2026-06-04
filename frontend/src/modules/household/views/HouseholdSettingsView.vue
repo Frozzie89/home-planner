@@ -13,6 +13,8 @@ import { useAuthStore } from '@/shared/stores/auth'
 import { useHouseholdStore } from '@/modules/household/stores/household'
 import type { Household } from '@/shared/types'
 import type { MemberRecord } from '@/modules/household/types'
+import MemberList from '@/modules/household/components/MemberList.vue'
+import BottomSheet from '@/shared/components/BottomSheet.vue'
 
 const CURRENCY_OPTIONS = [
   { code: 'AUD', label: 'AUD — Australian Dollar' },
@@ -56,6 +58,16 @@ const originalData = ref<{
 } | null>(null)
 
 const nameError = ref('')
+
+// Member management state
+const showInviteSheet = ref(false)
+const showRemoveSheet = ref(false)
+const memberToRemove = ref<MemberRecord | null>(null)
+const inviteLink = ref('')
+const inviteCopied = ref(false)
+const inviteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+let inviteCopiedTimer: ReturnType<typeof setTimeout> | null = null
+const removeStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
 const splitRatioSum = computed(() =>
   Object.values(splitRatioForm.value).reduce((sum, v) => sum + (v ?? 0), 0)
@@ -120,6 +132,7 @@ async function loadSettings() {
     formData.value.currency = household.currency
     formData.value.reminder_day = household.reminder_day
     members.value = membersList
+    splitRatioForm.value = {}
     for (const member of membersList) {
       splitRatioForm.value[member.id] = household.split_ratios[member.id] ?? 0
     }
@@ -147,6 +160,81 @@ watch([formData, splitRatioForm], () => {
     saveStatus.value = 'idle'
   }
 }, { deep: true })
+
+function handleRemoveMemberRequest(member: MemberRecord) {
+  memberToRemove.value = member
+  showRemoveSheet.value = true
+}
+
+function closeRemoveSheet() {
+  showRemoveSheet.value = false
+  memberToRemove.value = null
+  removeStatus.value = 'idle'
+}
+
+async function handleRemoveConfirm() {
+  if (!memberToRemove.value || removeStatus.value === 'loading') return
+  removeStatus.value = 'loading'
+  try {
+    await pb.collection('members').delete(memberToRemove.value.id)
+    closeRemoveSheet()
+    await loadSettings()
+    toast.add({ severity: 'success', summary: 'Member removed', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: "Couldn't remove member — try again", life: 5000 })
+    removeStatus.value = 'error'
+  }
+}
+
+function closeInviteSheet() {
+  showInviteSheet.value = false
+  inviteLink.value = ''
+  inviteCopied.value = false
+  inviteStatus.value = 'idle'
+  if (inviteCopiedTimer !== null) {
+    clearTimeout(inviteCopiedTimer)
+    inviteCopiedTimer = null
+  }
+}
+
+async function handleInviteOpen() {
+  if (!authStore.householdId) return
+  inviteStatus.value = 'loading'
+  try {
+    // Reuse an existing unaccepted invite to avoid accumulating orphaned tokens
+    let token: string
+    try {
+      const existing = await pb.collection('invitations').getFirstListItem<{ token: string }>(
+        pb.filter('household_id = {:hid} && accepted = false', { hid: authStore.householdId })
+      )
+      token = existing['token']
+    } catch (e: any) {
+      if (e?.status !== 404) throw e
+      // No existing invite — create one
+      const record = await pb.collection('invitations').create<{ token: string }>({
+        household_id: authStore.householdId,
+      })
+      token = record['token']
+    }
+    inviteLink.value = `${window.location.origin}/invite/${token}`
+    inviteStatus.value = 'success'
+    showInviteSheet.value = true
+  } catch {
+    toast.add({ severity: 'error', summary: "Couldn't generate invite link — try again", life: 5000 })
+    inviteStatus.value = 'error'
+  }
+}
+
+async function copyInviteLink() {
+  try {
+    await navigator.clipboard.writeText(inviteLink.value)
+    inviteCopied.value = true
+    if (inviteCopiedTimer !== null) clearTimeout(inviteCopiedTimer)
+    inviteCopiedTimer = setTimeout(() => { inviteCopied.value = false; inviteCopiedTimer = null }, 1500)
+  } catch {
+    // clipboard may be unavailable in some environments
+  }
+}
 
 async function handleSave() {
   validateName()
@@ -266,6 +354,20 @@ async function handleSave() {
           />
         </div>
 
+        <p class="section-label">MEMBERS</p>
+        <MemberList
+          :members="members"
+          :current-user-id="authStore.userId ?? ''"
+          @remove="handleRemoveMemberRequest"
+        />
+        <Button
+          label="Invite member"
+          class="invite-btn"
+          outlined
+          :loading="inviteStatus === 'loading'"
+          @click="handleInviteOpen"
+        />
+
         <Button
           label="Save Changes"
           class="save-btn"
@@ -283,6 +385,41 @@ async function handleSave() {
       </p>
     </template>
   </div>
+  <BottomSheet v-model:open="showInviteSheet" title="Invite member">
+    <div class="form-field">
+      <label for="invite-link">Share this link</label>
+      <InputText
+        id="invite-link"
+        :model-value="inviteLink"
+        readonly
+      />
+    </div>
+    <div class="sheet-actions">
+      <Button
+        :label="inviteCopied ? 'Copied!' : 'Copy link'"
+        outlined
+        @click="copyInviteLink"
+      />
+      <Button label="Done" @click="closeInviteSheet" />
+    </div>
+  </BottomSheet>
+
+  <BottomSheet v-model:open="showRemoveSheet" title="Remove member">
+    <p class="confirm-text">
+      Remove <strong>{{ memberToRemove ? (memberToRemove.expand?.user_id?.name || memberToRemove.expand?.user_id?.email || 'this member') : '' }}</strong> from the household?
+      They will lose access immediately.
+    </p>
+    <div class="sheet-actions">
+      <Button label="Cancel" text @click="closeRemoveSheet" />
+      <Button
+        label="Remove"
+        severity="danger"
+        :loading="removeStatus === 'loading'"
+        @click="handleRemoveConfirm"
+      />
+    </div>
+  </BottomSheet>
+
   <Toast />
 </template>
 
@@ -418,6 +555,25 @@ async function handleSave() {
 
 .mb-3 {
   margin-bottom: 0.75rem;
+}
+
+.invite-btn {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.sheet-actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+.confirm-text {
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.5;
 }
 
 @media (min-width: 768px) {

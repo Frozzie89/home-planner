@@ -11,10 +11,13 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockGetOne, mockGetFullList, mockUpdate, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
+const { mockGetOne, mockGetFullList, mockGetFirstListItem, mockUpdate, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
   mockGetOne: vi.fn(),
   mockGetFullList: vi.fn(),
+  mockGetFirstListItem: vi.fn(),
   mockUpdate: vi.fn(),
+  mockCreate: vi.fn(),
+  mockDelete: vi.fn(),
   mockToastAdd: vi.fn(),
   mockPopulate: vi.fn(),
   mockRouterBack: vi.fn(),
@@ -23,10 +26,18 @@ const { mockGetOne, mockGetFullList, mockUpdate, mockToastAdd, mockPopulate, moc
 
 vi.mock('@/shared/lib/pocketbase', () => ({
   pb: {
+    filter: (expr: string, params: Record<string, unknown>) => {
+      return Object.entries(params).reduce(
+        (s, [k, v]) => s.replace(`{:${k}}`, String(v)), expr
+      )
+    },
     collection: (name: string) => ({
       getOne: name === 'households' ? mockGetOne : vi.fn(),
       getFullList: name === 'members' ? mockGetFullList : vi.fn(),
+      getFirstListItem: name === 'invitations' ? mockGetFirstListItem : vi.fn(),
       update: name === 'households' ? mockUpdate : vi.fn(),
+      create: name === 'invitations' ? mockCreate : vi.fn(),
+      delete: name === 'members' ? mockDelete : vi.fn(),
     }),
   },
 }))
@@ -132,6 +143,16 @@ function mountView() {
         Toast: {
           template: '<div />',
         },
+        BottomSheet: {
+          props: ['open', 'title'],
+          emits: ['update:open'],
+          template: '<div v-if="open" class="bottom-sheet-stub" :data-title="title"><slot /></div>',
+        },
+        MemberList: {
+          props: ['members', 'currentUserId'],
+          emits: ['remove'],
+          template: '<div class="member-list-stub"><button v-for="m in members" :key="m.id" class="remove-btn-stub" @click="$emit(\'remove\', m)">Remove {{ m.id }}</button></div>',
+        },
       },
     },
   })
@@ -140,9 +161,19 @@ function mountView() {
 describe('HouseholdSettingsView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    mockGetOne.mockReset()
     mockGetOne.mockResolvedValue({ ...MOCK_HOUSEHOLD })
+    mockGetFullList.mockReset()
     mockGetFullList.mockResolvedValue([...MOCK_MEMBERS])
+    // Default: no existing invite (404) — handleInviteOpen falls through to create
+    mockGetFirstListItem.mockReset()
+    mockGetFirstListItem.mockRejectedValue({ status: 404 })
+    mockUpdate.mockReset()
     mockUpdate.mockResolvedValue({ ...MOCK_HOUSEHOLD })
+    mockCreate.mockReset()
+    mockCreate.mockResolvedValue({ id: 'invite-1', token: 'abc123testtoken456789012345678901', household_id: 'hh-test' })
+    mockDelete.mockReset()
+    mockDelete.mockResolvedValue(undefined)
     mockToastAdd.mockReset()
     mockPopulate.mockReset()
     mockRouterBack.mockReset()
@@ -294,5 +325,141 @@ describe('HouseholdSettingsView', () => {
     await flushPromises()
     expect(wrapper.text()).toContain("Couldn't load settings")
     expect(wrapper.find('.retry-btn').exists()).toBe(true)
+  })
+
+  // --- MEMBERS section ---
+
+  it('renders MEMBERS section label after fetch success', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).toContain('MEMBERS')
+  })
+
+  it('renders MemberList stub when fetchStatus === success', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.find('.member-list-stub').exists()).toBe(true)
+  })
+
+  it('"Invite member" button is visible after fetch', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    const btn = wrapper.findAll('button').find(b => b.text().includes('Invite member'))
+    expect(btn?.exists()).toBe(true)
+  })
+
+  it('clicking "Invite member" calls pb.collection("invitations").create() with household_id', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    const btn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
+    await btn!.trigger('click')
+    await flushPromises()
+    expect(mockCreate).toHaveBeenCalledWith({ household_id: 'hh-test' })
+  })
+
+  it('opens invite sheet with the generated link after create succeeds', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    const btn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
+    await btn!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Invite member"]').exists()).toBe(true)
+    expect(wrapper.find('#invite-link').exists()).toBe(true)
+    const input = wrapper.find('#invite-link').element as HTMLInputElement
+    expect(input.value).toContain('/invite/abc123testtoken456789012345678901')
+  })
+
+  it('reuses existing unaccepted invite instead of creating a new one', async () => {
+    mockGetFirstListItem.mockResolvedValue({ id: 'existing-invite', token: 'existingtoken12345678901234567890', household_id: 'hh-test' })
+    const wrapper = mountView()
+    await flushPromises()
+    const btn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
+    await btn!.trigger('click')
+    await flushPromises()
+    expect(mockCreate).not.toHaveBeenCalled()
+    const input = wrapper.find('#invite-link').element as HTMLInputElement
+    expect(input.value).toContain('/invite/existingtoken12345678901234567890')
+  })
+
+  it('shows error Toast when invite create fails and does not open sheet', async () => {
+    // getFirstListItem returns 404 (no existing invite) so it falls through to create
+    mockGetFirstListItem.mockRejectedValue({ status: 404 })
+    mockCreate.mockRejectedValue(new Error('Network error'))
+    const wrapper = mountView()
+    await flushPromises()
+    const inviteBtn = wrapper.findAll('button').find(b => b.text() === 'Invite member')
+    await inviteBtn!.trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({
+      severity: 'error',
+      summary: "Couldn't generate invite link — try again",
+    }))
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Invite member"]').exists()).toBe(false)
+  })
+
+  it('@remove event from MemberList opens remove confirmation BottomSheet', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    // Trigger the remove event from MemberList stub (first remove button = member-1)
+    const removeButtons = wrapper.findAll('.remove-btn-stub')
+    await removeButtons[0]!.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Remove member"]').exists()).toBe(true)
+  })
+
+  it('calls pb.collection("members").delete() with correct id on confirm', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    const removeButtons = wrapper.findAll('.remove-btn-stub')
+    await removeButtons[0]!.trigger('click')
+    await wrapper.vm.$nextTick()
+    const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Remove')
+    await confirmBtn!.trigger('click')
+    await flushPromises()
+    expect(mockDelete).toHaveBeenCalledWith('member-1')
+  })
+
+  it('calls loadSettings (getFullList) after successful removal', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    const initialCallCount = mockGetFullList.mock.calls.length
+    const removeButtons = wrapper.findAll('.remove-btn-stub')
+    await removeButtons[0]!.trigger('click')
+    await wrapper.vm.$nextTick()
+    const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Remove')
+    await confirmBtn!.trigger('click')
+    await flushPromises()
+    expect(mockGetFullList.mock.calls.length).toBeGreaterThan(initialCallCount)
+  })
+
+  it('shows success Toast after member removal', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    const removeButtons = wrapper.findAll('.remove-btn-stub')
+    await removeButtons[0]!.trigger('click')
+    await wrapper.vm.$nextTick()
+    const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Remove')
+    await confirmBtn!.trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({
+      severity: 'success',
+      summary: 'Member removed',
+    }))
+  })
+
+  it('shows error Toast when member delete fails', async () => {
+    mockDelete.mockRejectedValue(new Error('Network error'))
+    const wrapper = mountView()
+    await flushPromises()
+    const removeButtons = wrapper.findAll('.remove-btn-stub')
+    await removeButtons[0]!.trigger('click')
+    await wrapper.vm.$nextTick()
+    const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Remove')
+    await confirmBtn!.trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({
+      severity: 'error',
+      summary: "Couldn't remove member — try again",
+    }))
   })
 })

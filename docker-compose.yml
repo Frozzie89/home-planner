@@ -17,7 +17,7 @@ services:
     build:
       context: ./pocketbase
     volumes:
-      - ./pocketbase/pb_data:/pb/pb_data
+      - pb_data:/pb/pb_data
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.pocketbase.rule=Host(`${POCKETBASE_HOST}`)"
@@ -34,3 +34,6 @@ services:
       - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
     restart: unless-stopped
+
+volumes:
+  pb_data:

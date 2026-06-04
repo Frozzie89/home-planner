@@ -1,4 +1,5 @@
 <template>
+  <Toast />
   <div class="auth-view">
     <div v-if="callbackStatus === 'loading'" class="auth-loading">
       <span>Completing sign-in…</span>
@@ -31,12 +32,15 @@
         </button>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import Toast from 'primevue/toast'
+import { useToast } from 'primevue/usetoast'
 import { pb } from '@/shared/lib/pocketbase'
 import { useAuthStore } from '@/shared/stores/auth'
 
@@ -49,6 +53,7 @@ interface OAuth2Provider {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toast = useToast()
 
 const callbackStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 const providersStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
@@ -114,12 +119,35 @@ async function handleCallback(code: string, state: string) {
     await authStore.onOAuth2Success()
     callbackStatus.value = 'success'
 
+    // Check for a pending invite token stored before the OAuth2 redirect
+    const pendingToken = localStorage.getItem('pending_invite_token')
+    if (pendingToken) {
+      try {
+        await pb.send('/api/accept-invite', { method: 'POST', body: { token: pendingToken } })
+        localStorage.removeItem('pending_invite_token')
+        // Refresh membership so householdId is populated before the router guard evaluates
+        await authStore.loadMembership()
+        router.replace('/finances')
+      } catch {
+        localStorage.removeItem('pending_invite_token')
+        toast.add({
+          severity: 'error',
+          summary: 'Invitation could not be accepted',
+          detail: 'The link may have already been used.',
+          life: 6000,
+        })
+        router.replace(authStore.householdId ? '/finances' : '/setup')
+      }
+      return
+    }
+
     if (authStore.householdId) {
       router.replace('/finances')
     } else {
       router.replace('/setup')
     }
   } catch {
+    localStorage.removeItem('pending_invite_token')
     callbackStatus.value = 'error'
     errorMessage.value = 'Sign-in failed. Please try again.'
   }
