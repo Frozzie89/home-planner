@@ -18,12 +18,18 @@ routerAdd('POST', '/api/household/leave', (e) => {
       }
     }
 
-    // Fetch ratio data and compute new ratios before opening the transaction (reads outside, writes atomic)
+    // Fetch ratio data and remaining members before opening the transaction (reads outside, writes atomic)
     const household = $app.findRecordById('households', householdId)
     const splitRatios = household.get('split_ratios') || {}
 
-    // Redistribute remaining members' ratios proportionally to sum to 100
-    const remainingIds = Object.keys(splitRatios).filter(function(id) { return id !== callerMember.id })
+    // Derive remaining member IDs from the actual members collection, not split_ratios keys,
+    // so the result is correct even when split_ratios is null or was never fully initialised
+    const remainingMembers = $app.findRecordsByFilter(
+      'members', 'household_id = {:hid} && id != {:mid}', '', 500, 0,
+      { hid: householdId, mid: callerMember.id }
+    )
+    const remainingIds = remainingMembers.map(function(m) { return m.id })
+
     let newRatios = {}
     if (remainingIds.length === 1) {
       newRatios[remainingIds[0]] = 100
