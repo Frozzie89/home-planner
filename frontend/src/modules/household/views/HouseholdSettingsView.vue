@@ -14,6 +14,7 @@ import { useHouseholdStore } from '@/modules/household/stores/household'
 import type { Household } from '@/shared/types'
 import type { MemberRecord } from '@/modules/household/types'
 import MemberList from '@/modules/household/components/MemberList.vue'
+import UserAvatar from '@/shared/components/UserAvatar.vue'
 import BottomSheet from '@/shared/components/BottomSheet.vue'
 
 const CURRENCY_OPTIONS = [
@@ -422,7 +423,10 @@ async function handleSave() {
               :key="member.id"
               class="split-row"
             >
-              <span class="member-name">{{ getMemberName(member) }}</span>
+              <div class="member-name-group">
+                <UserAvatar :size="28" :user-record="member.expand?.user_id" />
+                <span class="member-name">{{ getMemberName(member) }}</span>
+              </div>
               <div class="split-input-group">
                 <InputNumber
                   v-model="splitRatioForm[member.id]"
@@ -682,6 +686,12 @@ async function handleSave() {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.member-name-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .member-name {
