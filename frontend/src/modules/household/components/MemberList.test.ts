@@ -49,12 +49,13 @@ describe('MemberList', () => {
     expect(badges).toContain('Admin')
   })
 
-  it('shows "Member" badge for member role', () => {
+  it('does not show role badge for member-role rows', () => {
     const wrapper = mount(MemberList, {
       props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
     })
     const badges = wrapper.findAll('.role-badge').map(el => el.text())
-    expect(badges).toContain('Member')
+    expect(badges).not.toContain('Member')
+    expect(badges).toHaveLength(1) // only Admin badge
   })
 
   it('does not render Remove button for member whose user_id === currentUserId', () => {
@@ -187,7 +188,7 @@ describe('MemberList', () => {
       props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
     })
     // member-2 is member → no Demote button; only member-1 (admin) has Demote
-    const memberRow = wrapper.findAll('li').find(li => li.text().includes('Member'))
+    const memberRow = wrapper.findAll('li').find(li => li.text().includes('Alex'))
     expect(memberRow!.find('.demote-btn').exists()).toBe(false)
     expect(wrapper.findAll('.demote-btn')).toHaveLength(1)
   })
@@ -257,5 +258,57 @@ describe('MemberList', () => {
       props: { members: membersEmptyDisplayName, currentUserId: 'other-user' },
     })
     expect(wrapper.find('.member-display-name').text()).toBe('Fallback Name')
+  })
+
+  it('shows "You" badge on the current user\'s row', () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
+    })
+    const youBadges = wrapper.findAll('.you-badge')
+    expect(youBadges).toHaveLength(1)
+    expect(youBadges[0]).toBeDefined()
+    expect(youBadges[0]!.text()).toBe('You')
+    const helenRow = wrapper.findAll('li').find(li => li.text().includes('Helen'))
+    expect(helenRow).toBeDefined()
+    expect(helenRow!.find('.member-info .you-badge').exists()).toBe(true)
+  })
+
+  it('does not show "You" badge on other members\' rows', () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
+    })
+    const alexRow = wrapper.findAll('li').find(li => li.text().includes('Alex'))
+    expect(alexRow).toBeDefined()
+    expect(alexRow!.find('.you-badge').exists()).toBe(false)
+  })
+
+  it('shows no "You" badge when currentUserId matches no member', () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
+    })
+    expect(wrapper.findAll('.you-badge')).toHaveLength(0)
+  })
+
+  it('sorts current user to top of list regardless of original order', () => {
+    // MOCK_MEMBERS has Helen (admin) first, Alex (member) second
+    // When currentUserId = Alex's userId (user-member), Alex should appear first
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'user-member' },
+    })
+    const rows = wrapper.findAll('.member-item')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]!.text()).toContain('Alex')
+    expect(rows[1]!.text()).toContain('Helen')
+  })
+
+  it('keeps current user at top when already first in input', () => {
+    // MOCK_MEMBERS has Helen (admin) first — sort must not displace her
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
+    })
+    const rows = wrapper.findAll('.member-item')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]!.text()).toContain('Helen')
+    expect(rows[1]!.text()).toContain('Alex')
   })
 })
