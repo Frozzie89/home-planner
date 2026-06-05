@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { MemberRecord } from '@/modules/household/types'
+import UserAvatar from '@/shared/components/UserAvatar.vue'
 
 const props = defineProps<{
   members: MemberRecord[]
@@ -29,6 +30,7 @@ const sortedMembers = computed(() =>
   <ul class="member-list">
     <li v-for="member in sortedMembers" :key="member.id" class="member-item">
       <div class="member-info">
+        <UserAvatar :size="28" :user-record="member.expand?.user_id" />
         <span class="member-display-name">{{ getMemberName(member) }}</span>
         <span v-if="member.role === 'admin'" class="role-badge admin">Admin</span>
         <span v-if="member.user_id === props.currentUserId" class="you-badge">You</span>

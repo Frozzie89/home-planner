@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/shared/stores/auth'
 import { useUiStore } from '@/shared/stores/ui'
+import UserAvatar from '@/shared/components/UserAvatar.vue'
 
 const emit = defineEmits<{
   'open-add-action': []
@@ -45,7 +46,7 @@ const headerButtonLabel = computed(() => {
           class="profile-link"
           aria-label="My profile"
         >
-          <i class="pi pi-user" style="font-size: 24px" />
+          <UserAvatar />
         </RouterLink>
         <RouterLink
           v-if="authStore.role === 'admin'"
