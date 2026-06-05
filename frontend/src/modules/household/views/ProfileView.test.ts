@@ -11,13 +11,15 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockGetOne, mockUpdate, mockToastAdd, mockLogout, mockRouterPush, mockAuthSave } = vi.hoisted(() => ({
+const { mockGetOne, mockUpdate, mockToastAdd, mockLogout, mockRouterPush, mockAuthSave, mockSend, mockLoadMembership } = vi.hoisted(() => ({
   mockGetOne: vi.fn(),
   mockUpdate: vi.fn(),
   mockToastAdd: vi.fn(),
   mockLogout: vi.fn(),
   mockRouterPush: vi.fn(),
   mockAuthSave: vi.fn(),
+  mockSend: vi.fn(),
+  mockLoadMembership: vi.fn(),
 }))
 
 vi.mock('@/shared/lib/pocketbase', () => ({
@@ -30,17 +32,27 @@ vi.mock('@/shared/lib/pocketbase', () => ({
       token: 'mock-token',
       save: mockAuthSave,
     },
+    send: mockSend,
   },
 }))
 
+const mockAuthStoreState = {
+  memberId: 'member-test',
+  householdId: 'hh-test',
+  role: 'member' as string,
+  userId: 'user-test',
+  isAuthenticated: true,
+  logout: mockLogout,
+  loadMembership: mockLoadMembership,
+}
+
 vi.mock('@/shared/stores/auth', () => ({
-  useAuthStore: () => ({
-    memberId: 'member-test',
-    householdId: 'hh-test',
-    role: 'member',
-    userId: 'user-test',
-    isAuthenticated: true,
-    logout: mockLogout,
+  useAuthStore: () => mockAuthStoreState,
+}))
+
+vi.mock('@/modules/household/stores/household', () => ({
+  useHouseholdStore: () => ({
+    name: 'Test Household',
   }),
 }))
 
@@ -101,6 +113,11 @@ const STUBS = {
     template: '<div class="user-avatar-stub" />',
     props: ['size'],
   },
+  BottomSheet: {
+    template: '<div v-if="open" data-testid="bottom-sheet"><slot /></div>',
+    props: ['open', 'title'],
+    emits: ['update:open'],
+  },
 }
 
 function mountView() {
@@ -116,6 +133,7 @@ describe('ProfileView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    mockAuthStoreState.role = 'member'
   })
 
   it('shows pre-filled display name from member record', async () => {
@@ -216,6 +234,79 @@ describe('ProfileView', () => {
     await signOutBtn!.trigger('click')
     expect(mockLogout).toHaveBeenCalledOnce()
     expect(mockRouterPush).toHaveBeenCalledWith('/auth')
+  })
+
+  describe('leave household', () => {
+    it('"Leave household" button renders when role is member', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      const wrapper = mountView()
+      await flushPromises()
+      const buttons = wrapper.findAll('button')
+      const leaveBtn = buttons.find(b => b.text() === 'Leave household')
+      expect(leaveBtn).toBeDefined()
+      expect(leaveBtn!.exists()).toBe(true)
+    })
+
+    it('"Leave household" button is absent when role is admin', async () => {
+      mockAuthStoreState.role = 'admin'
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      const wrapper = mountView()
+      await flushPromises()
+      const buttons = wrapper.findAll('button')
+      const leaveBtn = buttons.find(b => b.text() === 'Leave household')
+      expect(leaveBtn).toBeUndefined()
+    })
+
+    it('clicking "Leave household" button opens the confirmation BottomSheet', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      const wrapper = mountView()
+      await flushPromises()
+      expect(wrapper.find('[data-testid="bottom-sheet"]').exists()).toBe(false)
+      const buttons = wrapper.findAll('button')
+      const leaveBtn = buttons.find(b => b.text() === 'Leave household')
+      await leaveBtn!.trigger('click')
+      expect(wrapper.find('[data-testid="bottom-sheet"]').exists()).toBe(true)
+    })
+
+    it('confirming leave calls pb.send, authStore.loadMembership, then router.push("/setup")', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      mockSend.mockResolvedValue({ message: 'Left household' })
+      mockLoadMembership.mockResolvedValue(undefined)
+      mockRouterPush.mockResolvedValue(undefined)
+      const wrapper = mountView()
+      await flushPromises()
+
+      const leaveBtn = wrapper.findAll('button').find(b => b.text() === 'Leave household')
+      await leaveBtn!.trigger('click')
+      await wrapper.vm.$nextTick()
+
+      const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Leave')
+      await confirmBtn!.trigger('click')
+      await flushPromises()
+
+      expect(mockSend).toHaveBeenCalledWith('/api/household/leave', { method: 'POST' })
+      expect(mockLoadMembership).toHaveBeenCalledOnce()
+      expect(mockRouterPush).toHaveBeenCalledWith('/setup')
+    })
+
+    it('shows error toast when leave API call fails', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      mockSend.mockRejectedValue(new Error('Server error'))
+      const wrapper = mountView()
+      await flushPromises()
+
+      const leaveBtn = wrapper.findAll('button').find(b => b.text() === 'Leave household')
+      await leaveBtn!.trigger('click')
+      await wrapper.vm.$nextTick()
+
+      const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Leave')
+      await confirmBtn!.trigger('click')
+      await flushPromises()
+
+      expect(mockToastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: 'error', summary: "Couldn't leave — try again" })
+      )
+    })
   })
 
   describe('avatar upload', () => {
