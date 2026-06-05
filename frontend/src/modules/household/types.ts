@@ -4,6 +4,7 @@ export interface MemberRecord {
   household_id: string
   user_id: string
   role: 'member' | 'admin'
+  display_name?: string
   created: string
   updated: string
   expand?: {
