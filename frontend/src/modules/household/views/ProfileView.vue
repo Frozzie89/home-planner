@@ -66,32 +66,34 @@ async function save() {
 <template>
   <Toast aria-live="polite" />
   <div class="profile-view">
-    <h2 class="page-title">My Profile</h2>
+    <h2 class="profile-title">My Profile</h2>
 
-    <div v-if="fetchStatus === 'loading'" class="form-section">
-      <Skeleton height="1.5rem" class="mb-2" />
-      <Skeleton height="2.5rem" />
+    <div v-if="fetchStatus === 'loading'" class="pref-sections">
+      <Skeleton height="5rem" />
     </div>
 
     <div v-else-if="fetchStatus === 'error'" class="error-state">
       <p>Couldn't load your profile. Please refresh and try again.</p>
     </div>
 
-    <form v-else class="form-section" @submit.prevent="save">
-      <div class="field">
-        <label for="display-name" class="field-label">Display name</label>
-        <InputText
-          id="display-name"
-          v-model="displayNameInput"
-          maxlength="64"
-          placeholder="Enter a display name"
-          class="display-name-input"
-          aria-describedby="display-name-hint"
-        />
-        <span id="display-name-hint" class="field-hint">
-          If left empty, your name will appear as
-          <strong>{{ fallbackName }}</strong>
-        </span>
+    <form v-else class="pref-sections" @submit.prevent="save">
+      <div class="pref-section">
+        <p class="section-label">PROFILE</p>
+        <div class="pref-card">
+          <label for="display-name" class="field-label-upper">DISPLAY NAME</label>
+          <InputText
+            id="display-name"
+            v-model="displayNameInput"
+            maxlength="64"
+            placeholder="Enter a display name"
+            class="display-name-input"
+            aria-describedby="display-name-hint"
+          />
+          <span id="display-name-hint" class="field-hint">
+            If left empty, your name will appear as
+            <strong>{{ fallbackName }}</strong>
+          </span>
+        </div>
       </div>
 
       <Button
@@ -107,32 +109,57 @@ async function save() {
 
 <style scoped>
 .profile-view {
-  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
 }
 
-.page-title {
-  font-size: 1.125rem;
+.profile-title {
+  margin: 0;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin: 0 0 var(--space-3);
   color: var(--color-text-primary);
 }
 
-.form-section {
+.pref-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pref-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.pref-card {
+  background-color: var(--p-surface-card);
+  border: 1px solid var(--p-surface-border);
+  border-radius: 10px;
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.field-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
+.field-label-upper {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
 }
 
 .display-name-input {
@@ -145,11 +172,17 @@ async function save() {
 }
 
 .save-btn {
-  align-self: flex-start;
+  width: 100%;
 }
 
 .error-state {
   color: var(--color-balance-negative);
   font-size: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .profile-title {
+    font-size: 1.875rem;
+  }
 }
 </style>
