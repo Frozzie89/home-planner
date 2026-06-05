@@ -528,7 +528,7 @@ async function handleSave() {
 
   <BottomSheet v-model:open="showRemoveSheet" title="Remove member">
     <p class="confirm-text">
-      Remove <strong>{{ memberToRemove ? (memberToRemove.expand?.user_id?.name || memberToRemove.expand?.user_id?.email || 'this member') : '' }}</strong> from the household?
+      Remove <strong>{{ memberToRemove ? getMemberName(memberToRemove) : '' }}</strong> from the household?
       They will lose access immediately.
     </p>
     <div class="sheet-actions">
