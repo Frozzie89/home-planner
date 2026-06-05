@@ -5,19 +5,24 @@ import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
+import { useRouter } from 'vue-router'
 import { pb } from '@/shared/lib/pocketbase'
 import { useAuthStore } from '@/shared/stores/auth'
+import UserAvatar from '@/shared/components/UserAvatar.vue'
 import type { MemberRecord } from '@/modules/household/types'
 
 const authStore = useAuthStore()
 const toast = useToast()
+const router = useRouter()
 
 const fetchStatus = ref<'idle' | 'loading' | 'error' | 'success'>('loading')
 const saveStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+const avatarUploadStatus = ref<'idle' | 'loading'>('idle')
 
 const member = ref<MemberRecord | null>(null)
 const currentDisplayName = ref('')
 const displayNameInput = ref('')
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const fallbackName = computed(() => {
   const u = member.value?.expand?.user_id
@@ -45,6 +50,29 @@ onMounted(async () => {
     fetchStatus.value = 'error'
   }
 })
+
+function handleLogout() {
+  authStore.logout()
+  router.push('/auth')
+}
+
+async function handleAvatarChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file || !authStore.userId) return
+  avatarUploadStatus.value = 'loading'
+  try {
+    const formData = new FormData()
+    formData.append('avatar', file)
+    const updated = await pb.collection('users').update(authStore.userId, formData)
+    pb.authStore.save(pb.authStore.token, updated)
+    toast.add({ severity: 'success', summary: 'Profile picture updated', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: "Couldn't update picture — try again", life: 3000 })
+  } finally {
+    avatarUploadStatus.value = 'idle'
+    if (fileInputRef.value) fileInputRef.value.value = ''
+  }
+}
 
 async function save() {
   if (!authStore.memberId || isSaveDisabled.value) return
@@ -79,6 +107,28 @@ async function save() {
     <form v-else class="pref-sections" @submit.prevent="save">
       <div class="pref-section">
         <p class="section-label">PROFILE</p>
+        <div class="pref-card avatar-card">
+          <label for="avatar-upload" class="field-label-upper">PROFILE PICTURE</label>
+          <button
+            type="button"
+            class="avatar-btn"
+            :disabled="avatarUploadStatus === 'loading'"
+            aria-label="Change profile picture"
+          >
+            <UserAvatar :size="72" />
+            <span class="avatar-overlay" :class="{ 'is-loading': avatarUploadStatus === 'loading' }" aria-hidden="true">
+              <i :class="avatarUploadStatus === 'loading' ? 'pi pi-spin pi-spinner' : 'pi pi-camera'" />
+            </span>
+          </button>
+          <input
+            id="avatar-upload"
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            class="sr-only"
+            @change="handleAvatarChange"
+          />
+        </div>
         <div class="pref-card">
           <label for="display-name" class="field-label-upper">DISPLAY NAME</label>
           <InputText
@@ -95,6 +145,15 @@ async function save() {
           </span>
         </div>
       </div>
+
+      <Button
+        type="button"
+        label="Sign out"
+        severity="secondary"
+        outlined
+        class="sign-out-btn"
+        @click="handleLogout"
+      />
 
       <Button
         type="submit"
@@ -126,6 +185,46 @@ async function save() {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.avatar-btn {
+  align-self: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  /* match the avatar size exactly so the overlay clips correctly */
+  width: 72px;
+  height: 72px;
+}
+
+.avatar-btn:disabled {
+  cursor: wait;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.25rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.avatar-btn:hover .avatar-overlay,
+.avatar-btn:focus-visible .avatar-overlay,
+.avatar-overlay.is-loading {
+  opacity: 1;
 }
 
 .pref-section {
@@ -171,8 +270,21 @@ async function save() {
   color: var(--color-text-secondary);
 }
 
-.save-btn {
+.save-btn,
+.sign-out-btn {
   width: 100%;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .error-state {

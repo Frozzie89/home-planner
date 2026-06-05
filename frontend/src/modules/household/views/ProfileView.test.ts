@@ -11,10 +11,13 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockGetOne, mockUpdate, mockToastAdd } = vi.hoisted(() => ({
+const { mockGetOne, mockUpdate, mockToastAdd, mockLogout, mockRouterPush, mockAuthSave } = vi.hoisted(() => ({
   mockGetOne: vi.fn(),
   mockUpdate: vi.fn(),
   mockToastAdd: vi.fn(),
+  mockLogout: vi.fn(),
+  mockRouterPush: vi.fn(),
+  mockAuthSave: vi.fn(),
 }))
 
 vi.mock('@/shared/lib/pocketbase', () => ({
@@ -23,6 +26,10 @@ vi.mock('@/shared/lib/pocketbase', () => ({
       getOne: mockGetOne,
       update: mockUpdate,
     }),
+    authStore: {
+      token: 'mock-token',
+      save: mockAuthSave,
+    },
   },
 }))
 
@@ -33,6 +40,7 @@ vi.mock('@/shared/stores/auth', () => ({
     role: 'member',
     userId: 'user-test',
     isAuthenticated: true,
+    logout: mockLogout,
   }),
 }))
 
@@ -44,7 +52,7 @@ vi.mock('vue-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('vue-router')>()
   return {
     ...actual,
-    useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
+    useRouter: () => ({ push: mockRouterPush, back: vi.fn() }),
     useRoute: () => ({ path: '/profile' }),
   }
 })
@@ -77,8 +85,9 @@ const STUBS = {
     emits: ['update:modelValue'],
   },
   Button: {
-    template: '<button type="submit" :disabled="disabled || loading">{{ label }}</button>',
-    props: ['label', 'disabled', 'loading'],
+    template: '<button :type="type || \'button\'" :disabled="disabled || loading" @click="$emit(\'click\', $event)">{{ label }}</button>',
+    props: ['label', 'disabled', 'loading', 'type', 'severity', 'outlined'],
+    emits: ['click'],
   },
   Skeleton: {
     template: '<div class="skeleton-stub" />',
@@ -87,6 +96,10 @@ const STUBS = {
   Toast: {
     template: '<div />',
     props: ['ariaLive'],
+  },
+  UserAvatar: {
+    template: '<div class="user-avatar-stub" />',
+    props: ['size'],
   },
 }
 
@@ -181,5 +194,105 @@ describe('ProfileView', () => {
     expect(mockToastAdd).toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'error', summary: "Couldn't save — try again" })
     )
+  })
+
+  it('"Sign out" button is visible after successful load', async () => {
+    mockGetOne.mockResolvedValue(MOCK_MEMBER)
+    const wrapper = mountView()
+    await flushPromises()
+    const buttons = wrapper.findAll('button')
+    const signOutBtn = buttons.find(b => b.text() === 'Sign out')
+    expect(signOutBtn).toBeDefined()
+    expect(signOutBtn!.exists()).toBe(true)
+  })
+
+  it('clicking "Sign out" calls authStore.logout() and router.push("/auth")', async () => {
+    mockGetOne.mockResolvedValue(MOCK_MEMBER)
+    const wrapper = mountView()
+    await flushPromises()
+    const buttons = wrapper.findAll('button')
+    const signOutBtn = buttons.find(b => b.text() === 'Sign out')
+    expect(signOutBtn).toBeDefined()
+    await signOutBtn!.trigger('click')
+    expect(mockLogout).toHaveBeenCalledOnce()
+    expect(mockRouterPush).toHaveBeenCalledWith('/auth')
+  })
+
+  describe('avatar upload', () => {
+    it('avatar change button is visible after successful load', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      const wrapper = mountView()
+      await flushPromises()
+      expect(wrapper.find('[aria-label="Change profile picture"]').exists()).toBe(true)
+    })
+
+    it('uploading a file calls pb.collection("users").update with userId and FormData', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      const updatedRecord = { id: 'user-test', avatar: 'new-photo.jpg' }
+      mockUpdate.mockResolvedValue(updatedRecord)
+      const wrapper = mountView()
+      await flushPromises()
+
+      const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' })
+      const input = wrapper.find('input[type="file"]')
+      Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+      await input.trigger('change')
+      await flushPromises()
+
+      expect(mockUpdate).toHaveBeenCalledWith('user-test', expect.any(FormData))
+    })
+
+    it('calls pb.authStore.save with token and updated record on success', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      const updatedRecord = { id: 'user-test', avatar: 'new-photo.jpg' }
+      mockUpdate.mockResolvedValue(updatedRecord)
+      const wrapper = mountView()
+      await flushPromises()
+
+      const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' })
+      const input = wrapper.find('input[type="file"]')
+      Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+      await input.trigger('change')
+      await flushPromises()
+
+      expect(mockAuthSave).toHaveBeenCalledWith('mock-token', updatedRecord)
+    })
+
+    it('shows success toast after avatar upload', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      mockUpdate.mockResolvedValue({ id: 'user-test', avatar: 'new-photo.jpg' })
+      const wrapper = mountView()
+      await flushPromises()
+
+      const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' })
+      const input = wrapper.find('input[type="file"]')
+      Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+      await input.trigger('change')
+      await flushPromises()
+
+      expect(mockToastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: 'success', summary: 'Profile picture updated' })
+      )
+    })
+
+    it('shows error toast when avatar upload fails', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      mockUpdate.mockRejectedValue(new Error('upload failed'))
+      const wrapper = mountView()
+      await flushPromises()
+
+      // Reset mock so only the avatar upload call counts
+      mockUpdate.mockRejectedValue(new Error('upload failed'))
+
+      const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' })
+      const input = wrapper.find('input[type="file"]')
+      Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+      await input.trigger('change')
+      await flushPromises()
+
+      expect(mockToastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: 'error', summary: "Couldn't update picture — try again" })
+      )
+    })
   })
 })
