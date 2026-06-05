@@ -114,7 +114,7 @@ function validateName() {
 
 function getMemberName(member: MemberRecord): string {
   const u = member.expand?.user_id
-  return u?.name || u?.username || u?.email || 'Unknown member'
+  return member.display_name?.trim() || u?.name || u?.username || u?.email || 'Unknown member'
 }
 
 function onSplitRatioChange(changedMemberId: string) {

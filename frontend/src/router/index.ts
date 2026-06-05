@@ -57,6 +57,11 @@ const router = createRouter({
       component: () => import('../modules/household/views/HouseholdSettingsView.vue'),
     },
     {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../modules/household/views/ProfileView.vue'),
+    },
+    {
       path: '/',
       redirect: '/finances',
     },

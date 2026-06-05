@@ -40,6 +40,13 @@ const headerButtonLabel = computed(() => {
           <i :class="uiStore.isDark ? 'pi pi-sun' : 'pi pi-moon'" />
         </button>
         <RouterLink
+          to="/profile"
+          class="profile-link"
+          aria-label="My profile"
+        >
+          <i class="pi pi-user" style="font-size: 24px" />
+        </RouterLink>
+        <RouterLink
           v-if="authStore.role === 'admin'"
           to="/settings"
           class="settings-link"
@@ -137,6 +144,7 @@ const headerButtonLabel = computed(() => {
 }
 
 .theme-toggle,
+.profile-link,
 .settings-link {
   display: flex;
   align-items: center;
@@ -152,6 +160,7 @@ const headerButtonLabel = computed(() => {
 }
 
 .theme-toggle:hover,
+.profile-link:hover,
 .settings-link:hover {
   background-color: var(--p-surface-hover);
 }
