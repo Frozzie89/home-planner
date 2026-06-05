@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userId = ref<string | null>(null)
   const householdId = ref<string | null>(null)
   const role = ref<'member' | 'admin' | null>(null)
+  const memberId = ref<string | null>(null)
   const initStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
   let _initPromise: Promise<void> | null = null
@@ -47,11 +48,13 @@ export const useAuthStore = defineStore('auth', () => {
       )
       householdId.value = member.household_id
       role.value = member.role
+      memberId.value = member.id
     } catch (e: any) {
       // 404 = no member record = no household yet (new user or removed from household)
       if (e?.status === 404) {
         householdId.value = null
         role.value = null
+        memberId.value = null
       } else {
         throw e
       }
@@ -74,8 +77,9 @@ export const useAuthStore = defineStore('auth', () => {
     userId.value = null
     householdId.value = null
     role.value = null
+    memberId.value = null
     initStatus.value = 'idle'
   }
 
-  return { isAuthenticated, userId, householdId, role, initStatus, init, onOAuth2Success, loadMembership, logout }
+  return { isAuthenticated, userId, householdId, role, memberId, initStatus, init, onOAuth2Success, loadMembership, logout }
 })

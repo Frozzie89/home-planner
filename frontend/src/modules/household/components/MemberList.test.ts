@@ -220,4 +220,42 @@ describe('MemberList', () => {
     // member-1 has user_id='user-admin' and role='admin' → Demote should show
     expect(wrapper.findAll('.demote-btn')).toHaveLength(1)
   })
+
+  it('shows display_name when set, taking priority over name', () => {
+    const membersWithDisplayName: MemberRecord[] = [
+      {
+        id: 'member-7',
+        household_id: 'hh-test',
+        user_id: 'user-7',
+        role: 'member',
+        display_name: 'My Custom Name',
+        created: '2026-01-01',
+        updated: '2026-01-01',
+        expand: { user_id: { id: 'user-7', username: 'user7', name: 'Real Name', email: 'user7@test.com', avatar: '' } },
+      },
+    ]
+    const wrapper = mount(MemberList, {
+      props: { members: membersWithDisplayName, currentUserId: 'other-user' },
+    })
+    expect(wrapper.find('.member-display-name').text()).toBe('My Custom Name')
+  })
+
+  it('falls back to name when display_name is empty string', () => {
+    const membersEmptyDisplayName: MemberRecord[] = [
+      {
+        id: 'member-8',
+        household_id: 'hh-test',
+        user_id: 'user-8',
+        role: 'member',
+        display_name: '',
+        created: '2026-01-01',
+        updated: '2026-01-01',
+        expand: { user_id: { id: 'user-8', username: 'user8', name: 'Fallback Name', email: 'user8@test.com', avatar: '' } },
+      },
+    ]
+    const wrapper = mount(MemberList, {
+      props: { members: membersEmptyDisplayName, currentUserId: 'other-user' },
+    })
+    expect(wrapper.find('.member-display-name').text()).toBe('Fallback Name')
+  })
 })
