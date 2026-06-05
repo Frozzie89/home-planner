@@ -17,6 +17,18 @@ const { mockToggleTheme, mockInitTheme } = vi.hoisted(() => ({
 const mockIsDark = ref(false)
 const mockRole = ref<'admin' | 'member' | null>('member')
 
+vi.mock('@/shared/lib/pocketbase', () => ({
+  pb: {
+    authStore: {
+      record: { id: 'user-1', avatar: '', name: 'Helen' },
+      onChange: vi.fn(() => () => {}),
+    },
+    files: {
+      getURL: vi.fn().mockReturnValue(''),
+    },
+  },
+}))
+
 vi.mock('@/shared/stores/ui', () => ({
   useUiStore: () => ({
     get isDark() { return mockIsDark.value },
@@ -160,6 +172,14 @@ describe('AppNav', () => {
         global: { plugins: [createPinia(), router] },
       })
       expect(wrapper.find('.header-add-btn').exists()).toBe(false)
+    })
+  })
+
+  describe('profile link', () => {
+    it('retains aria-label="My profile" on the profile link', async () => {
+      const wrapper = await mountNav('/finances')
+      const profileLink = wrapper.find('[aria-label="My profile"]')
+      expect(profileLink.exists()).toBe(true)
     })
   })
 
