@@ -113,7 +113,8 @@ function validateName() {
 }
 
 function getMemberName(member: MemberRecord): string {
-  return member.expand?.user_id?.name || member.expand?.user_id?.email || 'Member'
+  const u = member.expand?.user_id
+  return u?.name || u?.username || u?.email || 'Unknown member'
 }
 
 function onSplitRatioChange(changedMemberId: string) {

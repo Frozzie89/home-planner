@@ -11,7 +11,7 @@ const MOCK_MEMBERS: MemberRecord[] = [
     role: 'admin',
     created: '2026-01-01',
     updated: '2026-01-01',
-    expand: { user_id: { id: 'user-admin', name: 'Helen', email: 'helen@test.com', avatar: '' } },
+    expand: { user_id: { id: 'user-admin', username: 'helen_admin', name: 'Helen', email: 'helen@test.com', avatar: '' } },
   },
   {
     id: 'member-2',
@@ -20,7 +20,7 @@ const MOCK_MEMBERS: MemberRecord[] = [
     role: 'member',
     created: '2026-01-01',
     updated: '2026-01-01',
-    expand: { user_id: { id: 'user-member', name: 'Alex', email: 'alex@test.com', avatar: '' } },
+    expand: { user_id: { id: 'user-member', username: 'alex_member', name: 'Alex', email: 'alex@test.com', avatar: '' } },
   },
 ]
 
@@ -94,7 +94,7 @@ describe('MemberList', () => {
         role: 'member',
         created: '2026-01-01',
         updated: '2026-01-01',
-        expand: { user_id: { id: 'user-3', name: '', email: 'noname@test.com', avatar: '' } },
+        expand: { user_id: { id: 'user-3', username: '', name: '', email: 'noname@test.com', avatar: '' } },
       },
     ]
     const wrapper = mount(MemberList, {
@@ -103,7 +103,25 @@ describe('MemberList', () => {
     expect(wrapper.find('.member-display-name').text()).toBe('noname@test.com')
   })
 
-  it('falls back to "Member" when both name and email are empty', () => {
+  it('falls back to username when name is empty but username is set', () => {
+    const membersNoName: MemberRecord[] = [
+      {
+        id: 'member-6',
+        household_id: 'hh-test',
+        user_id: 'user-6',
+        role: 'member',
+        created: '2026-01-01',
+        updated: '2026-01-01',
+        expand: { user_id: { id: 'user-6', username: 'discord_user_7890', name: '', email: '', avatar: '' } },
+      },
+    ]
+    const wrapper = mount(MemberList, {
+      props: { members: membersNoName, currentUserId: 'other-user' },
+    })
+    expect(wrapper.find('.member-display-name').text()).toBe('discord_user_7890')
+  })
+
+  it('falls back to "Unknown member" when name, username, and email are all empty', () => {
     const membersNoInfo: MemberRecord[] = [
       {
         id: 'member-4',
@@ -112,16 +130,16 @@ describe('MemberList', () => {
         role: 'member',
         created: '2026-01-01',
         updated: '2026-01-01',
-        expand: { user_id: { id: 'user-4', name: '', email: '', avatar: '' } },
+        expand: { user_id: { id: 'user-4', username: '', name: '', email: '', avatar: '' } },
       },
     ]
     const wrapper = mount(MemberList, {
       props: { members: membersNoInfo, currentUserId: 'other-user' },
     })
-    expect(wrapper.find('.member-display-name').text()).toBe('Member')
+    expect(wrapper.find('.member-display-name').text()).toBe('Unknown member')
   })
 
-  it('falls back to "Member" when expand is undefined', () => {
+  it('falls back to "Unknown member" when expand is undefined', () => {
     const memberNoExpand: MemberRecord[] = [
       {
         id: 'member-5',
@@ -135,7 +153,7 @@ describe('MemberList', () => {
     const wrapper = mount(MemberList, {
       props: { members: memberNoExpand, currentUserId: 'other-user' },
     })
-    expect(wrapper.find('.member-display-name').text()).toBe('Member')
+    expect(wrapper.find('.member-display-name').text()).toBe('Unknown member')
   })
 
   it('renders Promote button for member-role rows', () => {

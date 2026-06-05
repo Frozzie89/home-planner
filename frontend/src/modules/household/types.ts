@@ -9,6 +9,7 @@ export interface MemberRecord {
   expand?: {
     user_id?: {
       id: string
+      username: string
       name: string
       email: string
       avatar: string

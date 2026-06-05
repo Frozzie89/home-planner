@@ -13,7 +13,8 @@ const emit = defineEmits<{
 }>()
 
 function getMemberName(member: MemberRecord): string {
-  return member.expand?.user_id?.name || member.expand?.user_id?.email || 'Member'
+  const u = member.expand?.user_id
+  return u?.name || u?.username || u?.email || 'Unknown member'
 }
 </script>
 
@@ -98,7 +99,7 @@ function getMemberName(member: MemberRecord): string {
 }
 
 .role-badge.member {
-  background: var(--p-surface-100, #f3f4f6);
+  background: color-mix(in srgb, var(--color-text-secondary) 12%, transparent);
   color: var(--color-text-secondary);
 }
 
