@@ -125,11 +125,6 @@ function onSplitRatioChange(changedMemberId: string) {
   splitRatioForm.value[otherMember.id] = Math.max(0, Math.min(100, 100 - changedValue))
 }
 
-function goBack() {
-  if (window.history.length > 1) router.back()
-  else router.push('/finances')
-}
-
 async function loadSettings() {
   if (fetchStatus.value === 'loading') return
   if (!authStore.householdId) { fetchStatus.value = 'error'; return }
@@ -378,13 +373,7 @@ async function handleSave() {
 
 <template>
   <div class="settings-page">
-    <div class="settings-header">
-      <button class="back-btn" @click="goBack">
-        <i class="pi pi-arrow-left" />
-        <span>Back</span>
-      </button>
-      <h2 class="settings-title">Household Preferences</h2>
-    </div>
+    <h2 class="settings-title">Household Preferences</h2>
 
     <template v-if="fetchStatus === 'loading' || fetchStatus === 'idle'">
       <div class="pref-sections">
@@ -623,33 +612,8 @@ async function handleSave() {
   width: 100%;
 }
 
-.settings-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 44px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-text-primary);
-  border-radius: 8px;
-  padding: 0 8px 0 4px;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.back-btn:hover {
-  background-color: var(--p-surface-hover);
-}
-
 .settings-title {
+  margin-bottom: var(--space-1);
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--color-text-primary);
