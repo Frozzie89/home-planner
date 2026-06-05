@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -8,16 +8,21 @@ import { useToast } from 'primevue/usetoast'
 import { useRouter } from 'vue-router'
 import { pb } from '@/shared/lib/pocketbase'
 import { useAuthStore } from '@/shared/stores/auth'
+import { useHouseholdStore } from '@/modules/household/stores/household'
 import UserAvatar from '@/shared/components/UserAvatar.vue'
+import BottomSheet from '@/shared/components/BottomSheet.vue'
 import type { MemberRecord } from '@/modules/household/types'
 
 const authStore = useAuthStore()
+const householdStore = useHouseholdStore()
 const toast = useToast()
 const router = useRouter()
 
 const fetchStatus = ref<'idle' | 'loading' | 'error' | 'success'>('loading')
 const saveStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 const avatarUploadStatus = ref<'idle' | 'loading'>('idle')
+const showLeaveSheet = ref(false)
+const leaveStatus = ref<'idle' | 'loading' | 'error'>('idle')
 
 const member = ref<MemberRecord | null>(null)
 const currentDisplayName = ref('')
@@ -35,16 +40,21 @@ const isSaveDisabled = computed(
   () => !hasChange.value || saveStatus.value === 'loading'
 )
 
+const isNonAdminMember = computed(() => authStore.role === 'member')
+
 onMounted(async () => {
   if (!authStore.memberId) { fetchStatus.value = 'error'; return }
   try {
     const record = await pb.collection('members').getOne<MemberRecord>(
       authStore.memberId,
-      { expand: 'user_id' }
+      { expand: 'user_id,household_id' }
     )
     member.value = record
     currentDisplayName.value = record.display_name ?? ''
     displayNameInput.value = record.display_name ?? ''
+    if (record.expand?.household_id) {
+      householdStore.populate(record.expand.household_id)
+    }
     fetchStatus.value = 'success'
   } catch {
     fetchStatus.value = 'error'
@@ -55,6 +65,30 @@ function handleLogout() {
   authStore.logout()
   router.push('/auth')
 }
+
+async function handleLeaveConfirm() {
+  if (leaveStatus.value === 'loading') return
+  leaveStatus.value = 'loading'
+  let leaveSucceeded = false
+  try {
+    await pb.send('/api/household/leave', { method: 'POST' })
+    leaveSucceeded = true
+    showLeaveSheet.value = false
+    await authStore.loadMembership()
+    await router.push('/setup')
+  } catch {
+    if (leaveSucceeded) {
+      await router.push('/setup')
+    } else {
+      toast.add({ severity: 'error', summary: "Couldn't leave — try again", life: 5000 })
+      leaveStatus.value = 'error'
+    }
+  }
+}
+
+watch(showLeaveSheet, (isOpen) => {
+  if (!isOpen) leaveStatus.value = 'idle'
+})
 
 async function handleAvatarChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -93,6 +127,21 @@ async function save() {
 
 <template>
   <Toast aria-live="polite" />
+  <BottomSheet v-model:open="showLeaveSheet" title="Leave household">
+    <p class="confirm-text">
+      You will lose access to <strong>{{ householdStore.name ?? 'your household' }}</strong> immediately.
+      Your expense history will be preserved.
+    </p>
+    <div class="sheet-actions">
+      <Button label="Cancel" text @click="showLeaveSheet = false; leaveStatus = 'idle'" />
+      <Button
+        label="Leave"
+        severity="danger"
+        :loading="leaveStatus === 'loading'"
+        @click="handleLeaveConfirm"
+      />
+    </div>
+  </BottomSheet>
   <div class="profile-view">
     <h2 class="profile-title">My Profile</h2>
 
@@ -143,6 +192,24 @@ async function save() {
             If left empty, your name will appear as
             <strong>{{ fallbackName }}</strong>
           </span>
+        </div>
+      </div>
+
+      <div v-if="isNonAdminMember" class="pref-section">
+        <p class="section-label">HOUSEHOLD</p>
+        <div class="danger-zone">
+          <p class="danger-description">
+            Leaving removes your access immediately. Your expense history is preserved.
+          </p>
+          <Button
+            type="button"
+            label="Leave household"
+            severity="danger"
+            outlined
+            class="leave-btn"
+            :loading="leaveStatus === 'loading'"
+            @click="showLeaveSheet = true"
+          />
         </div>
       </div>
 
@@ -290,6 +357,41 @@ async function save() {
 .error-state {
   color: var(--color-balance-negative);
   font-size: 0.875rem;
+}
+
+.danger-section { color: var(--color-balance-negative); }
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-balance-negative) 30%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-balance-negative) 5%, transparent);
+}
+
+.danger-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.leave-btn { width: 100%; }
+
+.confirm-text {
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
 }
 
 @media (min-width: 768px) {

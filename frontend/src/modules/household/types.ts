@@ -15,6 +15,7 @@ export interface MemberRecord {
       email: string
       avatar: string
     }
+    household_id?: HouseholdConfig
   }
 }
 
