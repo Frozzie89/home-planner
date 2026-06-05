@@ -110,12 +110,10 @@ async function save() {
         <div class="pref-card avatar-card">
           <label for="avatar-upload" class="field-label-upper">PROFILE PICTURE</label>
           <button
-            id="avatar-upload"
             type="button"
             class="avatar-btn"
             :disabled="avatarUploadStatus === 'loading'"
             aria-label="Change profile picture"
-            @click="fileInputRef?.click()"
           >
             <UserAvatar :size="72" />
             <span class="avatar-overlay" :class="{ 'is-loading': avatarUploadStatus === 'loading' }" aria-hidden="true">
@@ -123,6 +121,7 @@ async function save() {
             </span>
           </button>
           <input
+            id="avatar-upload"
             ref="fileInputRef"
             type="file"
             accept="image/*"
@@ -148,6 +147,7 @@ async function save() {
       </div>
 
       <Button
+        type="button"
         label="Sign out"
         severity="secondary"
         outlined
