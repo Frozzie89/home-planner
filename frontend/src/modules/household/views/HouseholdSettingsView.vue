@@ -87,6 +87,12 @@ const splitRatioSum = computed(() =>
 
 const isSplitRatioValid = computed(() => splitRatioSum.value === 100)
 
+const sortedMembers = computed(() =>
+  [...members.value].sort((a, b) =>
+    a.user_id === authStore.userId ? -1 : b.user_id === authStore.userId ? 1 : 0
+  )
+)
+
 const isSingleMember = computed(() => members.value.length === 1)
 const adminCount = computed(() => members.value.filter(m => m.role === 'admin').length)
 const isSoleMember = isSingleMember
@@ -118,13 +124,6 @@ function getMemberName(member: MemberRecord): string {
   return member.display_name?.trim() || u?.name || u?.username || u?.email || 'Unknown member'
 }
 
-function onSplitRatioChange(changedMemberId: string) {
-  if (members.value.length !== 2) return
-  const otherMember = members.value.find(m => m.id !== changedMemberId)
-  if (!otherMember) return
-  const changedValue = splitRatioForm.value[changedMemberId] ?? 0
-  splitRatioForm.value[otherMember.id] = Math.max(0, Math.min(100, 100 - changedValue))
-}
 
 async function loadSettings() {
   if (fetchStatus.value === 'loading') return
@@ -419,7 +418,7 @@ async function handleSave() {
           <div class="pref-card">
             <p class="field-label-upper">DEFAULT SPLIT RATIO</p>
             <div
-              v-for="member in members"
+              v-for="member in sortedMembers"
               :key="member.id"
               class="split-row"
             >
@@ -434,7 +433,6 @@ async function handleSave() {
                   :min="0"
                   :max="100"
                   :max-fraction-digits="0"
-                  @update:model-value="onSplitRatioChange(member.id)"
                 />
                 <span class="pct-sign">%</span>
               </div>
