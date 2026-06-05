@@ -15,6 +15,7 @@ const uiStore = useUiStore()
 
 const isFinancesActive = computed(() => route.path.startsWith('/finances'))
 const isFoodActive = computed(() => route.path.startsWith('/food'))
+const isWideContent = computed(() => route.path === '/settings')
 
 async function goTo(path: string) {
   try { await router.push(path) } catch { /* NavigationFailure — user already on route */ }
@@ -81,7 +82,7 @@ const headerButtonLabel = computed(() => {
     </nav>
 
     <!-- Main content -->
-    <main class="app-content">
+    <main class="app-content" :class="{ 'content-wide': isWideContent }">
       <slot />
     </main>
 
@@ -274,6 +275,10 @@ const headerButtonLabel = computed(() => {
     margin: 0 auto;
     width: 100%;
     padding-bottom: var(--space-2);
+  }
+
+  .app-content.content-wide {
+    max-width: 56rem;
   }
 }
 </style>

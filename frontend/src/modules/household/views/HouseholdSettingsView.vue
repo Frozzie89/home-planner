@@ -125,11 +125,6 @@ function onSplitRatioChange(changedMemberId: string) {
   splitRatioForm.value[otherMember.id] = Math.max(0, Math.min(100, 100 - changedValue))
 }
 
-function goBack() {
-  if (window.history.length > 1) router.back()
-  else router.push('/finances')
-}
-
 async function loadSettings() {
   if (fetchStatus.value === 'loading') return
   if (!authStore.householdId) { fetchStatus.value = 'error'; return }
@@ -378,115 +373,130 @@ async function handleSave() {
 
 <template>
   <div class="settings-page">
-    <div class="settings-header">
-      <button class="back-btn" @click="goBack">
-        <i class="pi pi-arrow-left" />
-        <span>Back</span>
-      </button>
-      <h2 class="settings-title">Household Preferences</h2>
-    </div>
+    <h2 class="settings-title">Household Preferences</h2>
 
     <template v-if="fetchStatus === 'loading' || fetchStatus === 'idle'">
-      <Skeleton height="3rem" class="mb-3" />
-      <Skeleton height="3rem" class="mb-3" />
-      <Skeleton height="3rem" class="mb-3" />
-      <Skeleton height="3rem" class="mb-3" />
+      <div class="pref-sections">
+        <Skeleton height="5rem" class="mb-3" />
+        <Skeleton height="5rem" class="mb-3" />
+        <Skeleton height="8rem" class="mb-3" />
+        <Skeleton height="5rem" class="mb-3" />
+      </div>
     </template>
 
     <template v-else-if="fetchStatus === 'success'">
-      <div class="settings-card">
-        <p class="section-label">HOUSEHOLD</p>
-        <div class="form-field">
-          <label for="household-name">Household name</label>
-          <InputText
-            id="household-name"
-            v-model="formData.name"
-            :class="{ 'p-invalid': nameError }"
-            maxlength="64"
-            @blur="validateName"
-          />
-          <small v-if="nameError" class="field-error">{{ nameError }}</small>
+      <div class="pref-sections">
+        <!-- HOUSEHOLD -->
+        <div class="pref-section">
+          <p class="section-label">HOUSEHOLD</p>
+          <div class="pref-card">
+            <label class="field-label-upper" for="household-name">HOUSEHOLD NAME</label>
+            <InputText
+              id="household-name"
+              v-model="formData.name"
+              :class="{ 'p-invalid': nameError }"
+              maxlength="64"
+              @blur="validateName"
+            />
+            <small v-if="nameError" class="field-error">{{ nameError }}</small>
+          </div>
         </div>
 
-        <p class="section-label">FINANCES</p>
-        <div class="form-field">
-          <label for="currency">Display currency</label>
-          <Select
-            id="currency"
-            v-model="formData.currency"
-            :options="CURRENCY_OPTIONS"
-            option-label="label"
-            option-value="code"
-          />
-        </div>
-        <div class="form-field">
-          <p class="field-label">Default split ratio</p>
-          <div
-            v-for="member in members"
-            :key="member.id"
-            class="split-row"
-          >
-            <span class="member-name">{{ getMemberName(member) }}</span>
-            <InputNumber
-              v-model="splitRatioForm[member.id]"
-              :disabled="isSingleMember"
-              :min="0"
-              :max="100"
-              :max-fraction-digits="0"
-              suffix="%"
-              @update:model-value="onSplitRatioChange(member.id)"
+        <!-- FINANCES -->
+        <div class="pref-section">
+          <p class="section-label">FINANCES</p>
+          <div class="pref-card">
+            <label class="field-label-upper" for="currency">DISPLAY CURRENCY</label>
+            <Select
+              id="currency"
+              v-model="formData.currency"
+              :options="CURRENCY_OPTIONS"
+              option-label="label"
+              option-value="code"
             />
           </div>
-          <div
-            class="split-sum"
-            :class="{ valid: isSplitRatioValid, invalid: !isSplitRatioValid }"
-          >
-            {{ splitRatioSum }} / 100
-            <span v-if="isSplitRatioValid"> ✓</span>
-            <span v-else> — adjust to reach 100</span>
+          <div class="pref-card">
+            <p class="field-label-upper">DEFAULT SPLIT RATIO</p>
+            <div
+              v-for="member in members"
+              :key="member.id"
+              class="split-row"
+            >
+              <span class="member-name">{{ getMemberName(member) }}</span>
+              <div class="split-input-group">
+                <InputNumber
+                  v-model="splitRatioForm[member.id]"
+                  :disabled="isSingleMember"
+                  :min="0"
+                  :max="100"
+                  :max-fraction-digits="0"
+                  @update:model-value="onSplitRatioChange(member.id)"
+                />
+                <span class="pct-sign">%</span>
+              </div>
+            </div>
+            <div
+              class="split-sum"
+              :class="{ valid: isSplitRatioValid, invalid: !isSplitRatioValid }"
+            >
+              {{ splitRatioSum }} / 100
+              <span v-if="isSplitRatioValid"> ✓</span>
+              <span v-else> — adjust to reach 100</span>
+            </div>
           </div>
         </div>
 
-        <p class="section-label">FOOD</p>
-        <div class="form-field">
-          <label for="reminder-day">Planning reminder day</label>
-          <Select
-            id="reminder-day"
-            v-model="formData.reminder_day"
-            :options="REMINDER_DAY_OPTIONS"
-          />
+        <!-- FOOD -->
+        <div class="pref-section">
+          <p class="section-label">FOOD</p>
+          <div class="pref-card">
+            <label class="field-label-upper" for="reminder-day">PLANNING REMINDER DAY</label>
+            <Select
+              id="reminder-day"
+              v-model="formData.reminder_day"
+              :options="REMINDER_DAY_OPTIONS"
+            />
+          </div>
         </div>
 
-        <p class="section-label">MEMBERS</p>
-        <MemberList
-          :members="members"
-          :current-user-id="authStore.userId ?? ''"
-          @remove="handleRemoveMemberRequest"
-          @promote="handlePromoteRequest"
-          @demote="handleDemoteRequest"
-        />
-        <p v-if="lastAdminError" class="last-admin-error" role="alert">{{ lastAdminError }}</p>
-        <Button
-          label="Invite member"
-          class="invite-btn"
-          outlined
-          :loading="inviteStatus === 'loading'"
-          @click="handleInviteOpen"
-        />
-
-        <template v-if="isSoleMember">
-          <p class="section-label danger-section">DANGER ZONE</p>
-          <div class="danger-zone">
-            <p class="danger-description">
-              You are the only member of this household. Deleting it is permanent and cannot be undone.
-            </p>
+        <!-- MEMBERS -->
+        <div class="pref-section">
+          <p class="section-label">MEMBERS</p>
+          <div class="pref-card members-card">
+            <MemberList
+              :members="members"
+              :current-user-id="authStore.userId ?? ''"
+              @remove="handleRemoveMemberRequest"
+              @promote="handlePromoteRequest"
+              @demote="handleDemoteRequest"
+            />
+            <p v-if="lastAdminError" class="last-admin-error" role="alert">{{ lastAdminError }}</p>
             <Button
-              label="Delete household"
-              severity="danger"
+              label="Invite member"
+              class="invite-btn"
               outlined
-              class="delete-household-btn"
-              @click="handleDeleteHouseholdRequest"
+              :loading="inviteStatus === 'loading'"
+              @click="handleInviteOpen"
             />
+          </div>
+        </div>
+
+        <!-- DANGER ZONE -->
+        <template v-if="isSoleMember">
+          <div class="pref-section">
+            <p class="section-label danger-section">DANGER ZONE</p>
+            <div class="danger-zone">
+              <p class="danger-description">
+                You are the only member of this household. Deleting it is permanent and cannot be undone.
+              </p>
+              <Button
+                label="Delete household"
+                severity="danger"
+                outlined
+                class="delete-household-btn"
+                @click="handleDeleteHouseholdRequest"
+              />
+            </div>
           </div>
         </template>
 
@@ -599,73 +609,63 @@ async function handleSave() {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.settings-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 44px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-text-primary);
-  border-radius: 8px;
-  padding: 0 8px 0 4px;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.back-btn:hover {
-  background-color: var(--p-surface-hover);
+  width: 100%;
 }
 
 .settings-title {
-  font-size: 1.25rem;
-  font-weight: 600;
+  margin-bottom: var(--space-1);
+  font-size: 1.5rem;
+  font-weight: 700;
   color: var(--color-text-primary);
   margin: 0;
 }
 
-.settings-card {
+/* Section layout */
+
+.pref-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pref-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.pref-card {
+  background-color: var(--p-surface-card);
+  border: 1px solid var(--p-surface-border);
+  border-radius: 10px;
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.section-label {
-  font-size: 0.75rem;
+.field-label-upper {
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--color-text-secondary);
   letter-spacing: 0.08em;
-  margin: var(--space-2) 0 var(--space-1);
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field label,
-.field-label {
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: var(--color-text-primary);
+  text-transform: uppercase;
   margin: 0;
 }
 
 .field-error {
   color: var(--color-balance-negative);
   font-size: 0.75rem;
-  margin-top: 4px;
+  margin-top: 2px;
   display: block;
 }
 
@@ -675,12 +675,13 @@ async function handleSave() {
   background-color: color-mix(in srgb, var(--color-balance-negative) 8%, transparent);
 }
 
+/* Split ratio */
+
 .split-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-1) 0;
 }
 
 .member-name {
@@ -688,10 +689,22 @@ async function handleSave() {
   color: var(--color-text-primary);
 }
 
+.split-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pct-sign {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
 .split-sum {
   font-size: 0.875rem;
   font-weight: 500;
-  padding: var(--space-1) 0;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--p-surface-border);
 }
 
 .split-sum.valid {
@@ -702,10 +715,71 @@ async function handleSave() {
   color: var(--color-balance-negative);
 }
 
+/* Members card */
+
+.members-card {
+  gap: var(--space-1);
+}
+
+.invite-btn {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.last-admin-error {
+  font-size: 0.875rem;
+  color: var(--color-balance-negative);
+  margin: 0;
+}
+
+/* Danger zone */
+
+.danger-section {
+  color: var(--color-balance-negative);
+}
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-balance-negative) 30%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-balance-negative) 5%, transparent);
+}
+
+.danger-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.delete-household-btn {
+  width: 100%;
+}
+
+/* Save button */
+
 .save-btn {
   width: 100%;
-  margin-top: var(--space-2);
 }
+
+/* Sheet form fields */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field label {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+
+/* Error state */
 
 .fetch-error {
   font-size: 0.875rem;
@@ -728,10 +802,7 @@ async function handleSave() {
   margin-bottom: 0.75rem;
 }
 
-.invite-btn {
-  width: 100%;
-  margin-top: var(--space-1);
-}
+/* Bottom sheets */
 
 .sheet-actions {
   display: flex;
@@ -747,45 +818,9 @@ async function handleSave() {
   line-height: 1.5;
 }
 
-.last-admin-error {
-  font-size: 0.875rem;
-  color: var(--color-balance-negative);
-  margin: 0;
-  padding: var(--space-1) 0;
-}
-
-.danger-section {
-  color: var(--color-balance-negative);
-}
-
-.danger-zone {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  border: 1px solid color-mix(in srgb, var(--color-balance-negative) 30%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--color-balance-negative) 5%, transparent);
-}
-
-.danger-description {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  margin: 0;
-  line-height: 1.5;
-}
-
-.delete-household-btn {
-  width: 100%;
-}
-
 @media (min-width: 768px) {
-  .settings-card {
-    max-width: 480px;
-    margin: 0 auto;
-    background-color: var(--p-surface-card);
-    border-radius: 12px;
-    padding: var(--space-4);
+  .settings-title {
+    font-size: 1.875rem;
   }
 }
 </style>
