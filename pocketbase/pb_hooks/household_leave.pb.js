@@ -1,31 +1,4 @@
 /// POST /api/household/leave — non-admin member voluntarily leaves the household
-function redistributeRatios(splitRatios, leavingMemberId) {
-  const remainingIds = Object.keys(splitRatios).filter(function(id) { return id !== leavingMemberId })
-  if (remainingIds.length === 0) return {}
-  if (remainingIds.length === 1) {
-    const result = {}
-    result[remainingIds[0]] = 100
-    return result
-  }
-  const remainingSum = remainingIds.reduce(function(s, id) { return s + (splitRatios[id] || 0) }, 0)
-  const result = {}
-  let total = 0
-  for (let i = 0; i < remainingIds.length; i++) {
-    const id = remainingIds[i]
-    if (i === remainingIds.length - 1) {
-      result[id] = 100 - total
-    } else if (remainingSum === 0) {
-      const equal = Math.floor(100 / remainingIds.length)
-      result[id] = equal
-      total += equal
-    } else {
-      result[id] = Math.round((splitRatios[id] / remainingSum) * 100)
-      total += result[id]
-    }
-  }
-  return result
-}
-
 routerAdd('POST', '/api/household/leave', (e) => {
   try {
     const authRecord = e.auth
@@ -45,9 +18,32 @@ routerAdd('POST', '/api/household/leave', (e) => {
       }
     }
 
+    // Fetch ratio data and compute new ratios before opening the transaction (reads outside, writes atomic)
     const household = $app.findRecordById('households', householdId)
     const splitRatios = household.get('split_ratios') || {}
-    const newRatios = redistributeRatios(splitRatios, callerMember.id)
+
+    // Redistribute remaining members' ratios proportionally to sum to 100
+    const remainingIds = Object.keys(splitRatios).filter(function(id) { return id !== callerMember.id })
+    let newRatios = {}
+    if (remainingIds.length === 1) {
+      newRatios[remainingIds[0]] = 100
+    } else if (remainingIds.length > 1) {
+      const remainingSum = remainingIds.reduce(function(s, id) { return s + (splitRatios[id] || 0) }, 0)
+      let total = 0
+      for (let i = 0; i < remainingIds.length; i++) {
+        const id = remainingIds[i]
+        if (i === remainingIds.length - 1) {
+          newRatios[id] = 100 - total
+        } else if (remainingSum === 0) {
+          const equal = Math.floor(100 / remainingIds.length)
+          newRatios[id] = equal
+          total += equal
+        } else {
+          newRatios[id] = Math.round((splitRatios[id] / remainingSum) * 100)
+          total += newRatios[id]
+        }
+      }
+    }
 
     $app.runInTransaction((txApp) => {
       txApp.delete(callerMember)
