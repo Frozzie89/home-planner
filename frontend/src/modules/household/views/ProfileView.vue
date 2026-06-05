@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Skeleton from 'primevue/skeleton'
@@ -69,16 +69,26 @@ function handleLogout() {
 async function handleLeaveConfirm() {
   if (leaveStatus.value === 'loading') return
   leaveStatus.value = 'loading'
+  let leaveSucceeded = false
   try {
     await pb.send('/api/household/leave', { method: 'POST' })
+    leaveSucceeded = true
     showLeaveSheet.value = false
     await authStore.loadMembership()
     await router.push('/setup')
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't leave — try again", life: 5000 })
-    leaveStatus.value = 'error'
+    if (leaveSucceeded) {
+      await router.push('/setup')
+    } else {
+      toast.add({ severity: 'error', summary: "Couldn't leave — try again", life: 5000 })
+      leaveStatus.value = 'error'
+    }
   }
 }
+
+watch(showLeaveSheet, (isOpen) => {
+  if (!isOpen) leaveStatus.value = 'idle'
+})
 
 async function handleAvatarChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -193,7 +203,7 @@ async function save() {
           </p>
           <Button
             type="button"
-            :label="`Leave ${householdStore.name ?? 'household'}`"
+            label="Leave household"
             severity="danger"
             outlined
             class="leave-btn"
