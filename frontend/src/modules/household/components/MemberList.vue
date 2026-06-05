@@ -8,6 +8,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   remove: [member: MemberRecord]
+  promote: [member: MemberRecord]
+  demote: [member: MemberRecord]
 }>()
 
 function getMemberName(member: MemberRecord): string {
@@ -24,14 +26,32 @@ function getMemberName(member: MemberRecord): string {
           {{ member.role === 'admin' ? 'Admin' : 'Member' }}
         </span>
       </div>
-      <button
-        v-if="member.user_id !== props.currentUserId"
-        class="remove-btn"
-        :aria-label="`Remove ${getMemberName(member)}`"
-        @click="emit('remove', member)"
-      >
-        Remove
-      </button>
+      <div class="member-actions">
+        <button
+          v-if="member.role === 'member'"
+          class="promote-btn action-btn"
+          :aria-label="`Promote ${getMemberName(member)} to Admin`"
+          @click="emit('promote', member)"
+        >
+          Promote
+        </button>
+        <button
+          v-if="member.role === 'admin'"
+          class="demote-btn action-btn"
+          :aria-label="`Demote ${getMemberName(member)} to Member`"
+          @click="emit('demote', member)"
+        >
+          Demote
+        </button>
+        <button
+          v-if="member.user_id !== props.currentUserId"
+          class="remove-btn"
+          :aria-label="`Remove ${getMemberName(member)}`"
+          @click="emit('remove', member)"
+        >
+          Remove
+        </button>
+      </div>
     </li>
   </ul>
 </template>
@@ -80,6 +100,24 @@ function getMemberName(member: MemberRecord): string {
 .role-badge.member {
   background: var(--p-surface-100, #f3f4f6);
   color: var(--color-text-secondary);
+}
+
+.member-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn {
+  font-size: 0.75rem;
+  min-height: 32px;
+  padding: 0 var(--space-1);
+  background: none;
+  border: 1px solid var(--p-primary-color);
+  color: var(--p-primary-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .remove-btn {

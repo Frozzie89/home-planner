@@ -137,4 +137,69 @@ describe('MemberList', () => {
     })
     expect(wrapper.find('.member-display-name').text()).toBe('Member')
   })
+
+  it('renders Promote button for member-role rows', () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
+    })
+    // member-2 has role='member' → should have Promote
+    expect(wrapper.findAll('.promote-btn')).toHaveLength(1)
+  })
+
+  it('does NOT render Promote button for admin-role rows', () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
+    })
+    // member-1 is admin → no Promote button; member-2 is member → has Promote
+    const adminRow = wrapper.findAll('li').find(li => li.text().includes('Admin'))
+    expect(adminRow!.find('.promote-btn').exists()).toBe(false)
+    expect(wrapper.findAll('.promote-btn')).toHaveLength(1)
+  })
+
+  it('renders Demote button for admin-role rows', () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
+    })
+    // member-1 is admin → should have Demote
+    expect(wrapper.findAll('.demote-btn')).toHaveLength(1)
+  })
+
+  it('does NOT render Demote button for member-role rows', () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
+    })
+    // member-2 is member → no Demote button; only member-1 (admin) has Demote
+    const memberRow = wrapper.findAll('li').find(li => li.text().includes('Member'))
+    expect(memberRow!.find('.demote-btn').exists()).toBe(false)
+    expect(wrapper.findAll('.demote-btn')).toHaveLength(1)
+  })
+
+  it('emits promote event with correct member when Promote clicked', async () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
+    })
+    await wrapper.find('.promote-btn').trigger('click')
+    const emitted = wrapper.emitted('promote')
+    expect(emitted).toBeTruthy()
+    expect(emitted![0]![0]).toMatchObject({ id: 'member-2', role: 'member' })
+  })
+
+  it('emits demote event with correct member when Demote clicked', async () => {
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
+    })
+    await wrapper.find('.demote-btn').trigger('click')
+    const emitted = wrapper.emitted('demote')
+    expect(emitted).toBeTruthy()
+    expect(emitted![0]![0]).toMatchObject({ id: 'member-1', role: 'admin' })
+  })
+
+  it('Demote button visible on current user own admin row', () => {
+    // Current user is the admin — continuity check is in HouseholdSettingsView, not MemberList
+    const wrapper = mount(MemberList, {
+      props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
+    })
+    // member-1 has user_id='user-admin' and role='admin' → Demote should show
+    expect(wrapper.findAll('.demote-btn')).toHaveLength(1)
+  })
 })
