@@ -141,9 +141,10 @@ async function loadSettings() {
     formData.value.currency = household.currency
     formData.value.reminder_day = household.reminder_day
     members.value = membersList
+    const ratios = household.split_ratios ?? {}
     splitRatioForm.value = {}
     for (const member of membersList) {
-      splitRatioForm.value[member.id] = household.split_ratios[member.id] ?? 0
+      splitRatioForm.value[member.id] = ratios[member.id] ?? 0
     }
     // Single-member: always 100 — InputNumber is disabled; DB may have 0 if never explicitly set
     if (membersList.length === 1 && membersList[0]) {
