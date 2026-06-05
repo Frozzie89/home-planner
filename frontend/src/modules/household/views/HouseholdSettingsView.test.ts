@@ -11,17 +11,20 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockGetOne, mockGetFullList, mockGetFirstListItem, mockUpdate, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush } = vi.hoisted(() => ({
+const { mockGetOne, mockGetFullList, mockGetFirstListItem, mockUpdate, mockUpdateMember, mockCreate, mockDelete, mockToastAdd, mockPopulate, mockRouterBack, mockRouterPush, mockSend, mockLoadMembership } = vi.hoisted(() => ({
   mockGetOne: vi.fn(),
   mockGetFullList: vi.fn(),
   mockGetFirstListItem: vi.fn(),
   mockUpdate: vi.fn(),
+  mockUpdateMember: vi.fn(),
   mockCreate: vi.fn(),
   mockDelete: vi.fn(),
   mockToastAdd: vi.fn(),
   mockPopulate: vi.fn(),
   mockRouterBack: vi.fn(),
   mockRouterPush: vi.fn(),
+  mockSend: vi.fn(),
+  mockLoadMembership: vi.fn(),
 }))
 
 vi.mock('@/shared/lib/pocketbase', () => ({
@@ -35,10 +38,11 @@ vi.mock('@/shared/lib/pocketbase', () => ({
       getOne: name === 'households' ? mockGetOne : vi.fn(),
       getFullList: name === 'members' ? mockGetFullList : vi.fn(),
       getFirstListItem: name === 'invitations' ? mockGetFirstListItem : vi.fn(),
-      update: name === 'households' ? mockUpdate : vi.fn(),
+      update: name === 'households' ? mockUpdate : name === 'members' ? mockUpdateMember : vi.fn(),
       create: name === 'invitations' ? mockCreate : vi.fn(),
       delete: name === 'members' ? mockDelete : vi.fn(),
     }),
+    send: mockSend,
   },
 }))
 
@@ -48,6 +52,7 @@ vi.mock('@/shared/stores/auth', () => ({
     role: 'admin',
     userId: 'user-test',
     isAuthenticated: true,
+    loadMembership: mockLoadMembership,
   }),
 }))
 
@@ -150,8 +155,14 @@ function mountView() {
         },
         MemberList: {
           props: ['members', 'currentUserId'],
-          emits: ['remove'],
-          template: '<div class="member-list-stub"><button v-for="m in members" :key="m.id" class="remove-btn-stub" @click="$emit(\'remove\', m)">Remove {{ m.id }}</button></div>',
+          emits: ['remove', 'promote', 'demote'],
+          template: `<div class="member-list-stub">
+            <template v-for="m in members" :key="m.id">
+              <button v-if="m.user_id !== currentUserId" class="remove-btn-stub" @click="$emit('remove', m)">Remove {{ m.id }}</button>
+              <button v-if="m.role === 'member'" class="promote-btn-stub" @click="$emit('promote', m)">Promote {{ m.id }}</button>
+              <button v-if="m.role === 'admin'" class="demote-btn-stub" @click="$emit('demote', m)">Demote {{ m.id }}</button>
+            </template>
+          </div>`,
         },
       },
     },
@@ -170,6 +181,10 @@ describe('HouseholdSettingsView', () => {
     mockGetFirstListItem.mockRejectedValue({ status: 404 })
     mockUpdate.mockReset()
     mockUpdate.mockResolvedValue({ ...MOCK_HOUSEHOLD })
+    mockUpdateMember.mockReset()
+    mockUpdateMember.mockResolvedValue({})
+    mockSend.mockReset()
+    mockLoadMembership.mockReset()
     mockCreate.mockReset()
     mockCreate.mockResolvedValue({ id: 'invite-1', token: 'abc123testtoken456789012345678901', household_id: 'hh-test' })
     mockDelete.mockReset()
@@ -400,9 +415,10 @@ describe('HouseholdSettingsView', () => {
   it('@remove event from MemberList opens remove confirmation BottomSheet', async () => {
     const wrapper = mountView()
     await flushPromises()
-    // Trigger the remove event from MemberList stub (first remove button = member-1)
+    // member-2 is a non-admin member — remove is not blocked
     const removeButtons = wrapper.findAll('.remove-btn-stub')
-    await removeButtons[0]!.trigger('click')
+    const member2RemoveBtn = removeButtons.find(b => b.text().includes('member-2'))
+    await member2RemoveBtn!.trigger('click')
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.bottom-sheet-stub[data-title="Remove member"]').exists()).toBe(true)
   })
@@ -411,12 +427,13 @@ describe('HouseholdSettingsView', () => {
     const wrapper = mountView()
     await flushPromises()
     const removeButtons = wrapper.findAll('.remove-btn-stub')
-    await removeButtons[0]!.trigger('click')
+    const member2RemoveBtn = removeButtons.find(b => b.text().includes('member-2'))
+    await member2RemoveBtn!.trigger('click')
     await wrapper.vm.$nextTick()
     const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Remove')
     await confirmBtn!.trigger('click')
     await flushPromises()
-    expect(mockDelete).toHaveBeenCalledWith('member-1')
+    expect(mockDelete).toHaveBeenCalledWith('member-2')
   })
 
   it('calls loadSettings (getFullList) after successful removal', async () => {
@@ -424,7 +441,8 @@ describe('HouseholdSettingsView', () => {
     await flushPromises()
     const initialCallCount = mockGetFullList.mock.calls.length
     const removeButtons = wrapper.findAll('.remove-btn-stub')
-    await removeButtons[0]!.trigger('click')
+    const member2RemoveBtn = removeButtons.find(b => b.text().includes('member-2'))
+    await member2RemoveBtn!.trigger('click')
     await wrapper.vm.$nextTick()
     const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Remove')
     await confirmBtn!.trigger('click')
@@ -436,7 +454,8 @@ describe('HouseholdSettingsView', () => {
     const wrapper = mountView()
     await flushPromises()
     const removeButtons = wrapper.findAll('.remove-btn-stub')
-    await removeButtons[0]!.trigger('click')
+    const member2RemoveBtn = removeButtons.find(b => b.text().includes('member-2'))
+    await member2RemoveBtn!.trigger('click')
     await wrapper.vm.$nextTick()
     const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Remove')
     await confirmBtn!.trigger('click')
@@ -452,7 +471,8 @@ describe('HouseholdSettingsView', () => {
     const wrapper = mountView()
     await flushPromises()
     const removeButtons = wrapper.findAll('.remove-btn-stub')
-    await removeButtons[0]!.trigger('click')
+    const member2RemoveBtn = removeButtons.find(b => b.text().includes('member-2'))
+    await member2RemoveBtn!.trigger('click')
     await wrapper.vm.$nextTick()
     const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Remove')
     await confirmBtn!.trigger('click')
@@ -461,5 +481,206 @@ describe('HouseholdSettingsView', () => {
       severity: 'error',
       summary: "Couldn't remove member — try again",
     }))
+  })
+
+  // --- PROMOTE ---
+
+  it('@promote event from MemberList opens promote confirmation BottomSheet', async () => {
+    // MOCK_MEMBERS: member-2 has role='member' → promote-btn-stub renders
+    const wrapper = mountView()
+    await flushPromises()
+    const promoteBtn = wrapper.find('.promote-btn-stub')
+    await promoteBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Promote to Admin"]').exists()).toBe(true)
+  })
+
+  it('confirms promote: calls pb.collection("members").update() with { role: "admin" }', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.find('.promote-btn-stub').trigger('click')
+    await wrapper.vm.$nextTick()
+    const confirmBtn = wrapper.findAll('button').find(b => b.text() === 'Promote')
+    await confirmBtn!.trigger('click')
+    await flushPromises()
+    expect(mockUpdateMember).toHaveBeenCalledWith('member-2', { role: 'admin' })
+  })
+
+  it('shows success Toast after promote succeeds', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.find('.promote-btn-stub').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find(b => b.text() === 'Promote')!.trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }))
+  })
+
+  it('shows error Toast when promote fails', async () => {
+    mockUpdateMember.mockRejectedValue(new Error('Network error'))
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.find('.promote-btn-stub').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find(b => b.text() === 'Promote')!.trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }))
+  })
+
+  // --- DEMOTE ---
+
+  it('@demote event from MemberList opens demote confirmation BottomSheet when 2 admins', async () => {
+    // Override: 2 admins so demote is allowed
+    mockGetFullList.mockResolvedValue([
+      { ...MOCK_MEMBERS[0]!, user_id: 'user-other' },  // admin, not current user
+      { id: 'member-self', household_id: 'hh-test', role: 'admin' as const, user_id: 'user-test',
+        created: '', updated: '',
+        expand: { user_id: { id: 'user-test', name: 'Helen', email: 'helen@test.com', avatar: '' } } },
+    ])
+    const wrapper = mountView()
+    await flushPromises()
+    const demoteBtn = wrapper.find('.demote-btn-stub')
+    await demoteBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Demote to Member"]').exists()).toBe(true)
+  })
+
+  it('confirms demote: calls pb.collection("members").update() with { role: "member" }', async () => {
+    mockGetFullList.mockResolvedValue([
+      { ...MOCK_MEMBERS[0]!, user_id: 'user-other', role: 'admin' as const },
+      { id: 'member-self', household_id: 'hh-test', role: 'admin' as const, user_id: 'user-test',
+        created: '', updated: '',
+        expand: { user_id: { id: 'user-test', name: 'Helen', email: 'helen@test.com', avatar: '' } } },
+    ])
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.find('.demote-btn-stub').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find(b => b.text() === 'Demote')!.trigger('click')
+    await flushPromises()
+    expect(mockUpdateMember).toHaveBeenCalledWith(expect.any(String), { role: 'member' })
+  })
+
+  // --- LAST ADMIN BLOCK ---
+
+  it('blocks demote-self when only 1 admin — shows inline error, no sheet opens', async () => {
+    // Sole admin is current user (user-test)
+    mockGetFullList.mockResolvedValue([
+      { id: 'member-self', household_id: 'hh-test', role: 'admin' as const, user_id: 'user-test',
+        created: '', updated: '',
+        expand: { user_id: { id: 'user-test', name: 'Helen', email: 'helen@test.com', avatar: '' } } },
+      { ...MOCK_MEMBERS[1]! },
+    ])
+    const wrapper = mountView()
+    await flushPromises()
+    const demoteBtn = wrapper.find('.demote-btn-stub')
+    await demoteBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Demote to Member"]').exists()).toBe(false)
+    expect(wrapper.find('.last-admin-error').exists()).toBe(true)
+    expect(wrapper.find('.last-admin-error').text()).toContain('At least one admin must remain')
+  })
+
+  it('blocks remove on last admin — shows inline error, no remove sheet opens', async () => {
+    // MOCK_MEMBERS: member-1 (admin, user-1), member-2 (member)
+    // adminCount === 1, member-1 role === 'admin' → block remove on member-1
+    const wrapper = mountView()
+    await flushPromises()
+    // remove-btn-stub for member-1 (admin) — first remove button
+    const removeButtons = wrapper.findAll('.remove-btn-stub')
+    await removeButtons[0]!.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Remove member"]').exists()).toBe(false)
+    expect(wrapper.find('.last-admin-error').exists()).toBe(true)
+  })
+
+  // --- DELETE HOUSEHOLD ---
+
+  it('"Delete household" section NOT visible when multiple members', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    // MOCK_MEMBERS has 2 members → isSoleMember = false
+    expect(wrapper.text()).not.toContain('Delete household')
+  })
+
+  it('"Delete household" section visible when sole member', async () => {
+    mockGetFullList.mockResolvedValue([
+      { id: 'member-self', household_id: 'hh-test', role: 'admin' as const, user_id: 'user-test',
+        created: '', updated: '',
+        expand: { user_id: { id: 'user-test', name: 'Helen', email: 'helen@test.com', avatar: '' } } },
+    ])
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Delete household')
+  })
+
+  it('clicking "Delete household" trigger button opens confirmation BottomSheet', async () => {
+    mockGetFullList.mockResolvedValue([
+      { id: 'member-self', household_id: 'hh-test', role: 'admin' as const, user_id: 'user-test',
+        created: '', updated: '',
+        expand: { user_id: { id: 'user-test', name: 'Helen', email: 'helen@test.com', avatar: '' } } },
+    ])
+    const wrapper = mountView()
+    await flushPromises()
+    const deleteBtn = wrapper.findAll('button').find(b => b.text() === 'Delete household')
+    await deleteBtn!.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.bottom-sheet-stub[data-title="Delete Household"]').exists()).toBe(true)
+  })
+
+  it('confirm delete calls pb.send with DELETE method', async () => {
+    mockGetFullList.mockResolvedValue([
+      { id: 'member-self', household_id: 'hh-test', role: 'admin' as const, user_id: 'user-test',
+        created: '', updated: '',
+        expand: { user_id: { id: 'user-test', name: 'Helen', email: 'helen@test.com', avatar: '' } } },
+    ])
+    mockSend.mockResolvedValue({ message: 'Household deleted' })
+    mockLoadMembership.mockResolvedValue(undefined)
+    const wrapper = mountView()
+    await flushPromises()
+    // Open sheet by clicking trigger button
+    await wrapper.findAll('button').find(b => b.text() === 'Delete household')!.trigger('click')
+    await wrapper.vm.$nextTick()
+    // Click confirm button in sheet (last "Delete household" button)
+    const allDeleteBtns = wrapper.findAll('button').filter(b => b.text() === 'Delete household')
+    await allDeleteBtns[allDeleteBtns.length - 1]!.trigger('click')
+    await flushPromises()
+    expect(mockSend).toHaveBeenCalledWith('/api/household', { method: 'DELETE' })
+  })
+
+  it('after delete success: calls authStore.loadMembership() and router.push("/setup")', async () => {
+    mockGetFullList.mockResolvedValue([
+      { id: 'member-self', household_id: 'hh-test', role: 'admin' as const, user_id: 'user-test',
+        created: '', updated: '',
+        expand: { user_id: { id: 'user-test', name: 'Helen', email: 'helen@test.com', avatar: '' } } },
+    ])
+    mockSend.mockResolvedValue({})
+    mockLoadMembership.mockResolvedValue(undefined)
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text() === 'Delete household')!.trigger('click')
+    await wrapper.vm.$nextTick()
+    const allDeleteBtns = wrapper.findAll('button').filter(b => b.text() === 'Delete household')
+    await allDeleteBtns[allDeleteBtns.length - 1]!.trigger('click')
+    await flushPromises()
+    expect(mockLoadMembership).toHaveBeenCalled()
+    expect(mockRouterPush).toHaveBeenCalledWith('/setup')
+  })
+
+  it('shows error Toast when delete fails', async () => {
+    mockGetFullList.mockResolvedValue([
+      { id: 'member-self', household_id: 'hh-test', role: 'admin' as const, user_id: 'user-test',
+        created: '', updated: '',
+        expand: { user_id: { id: 'user-test', name: 'Helen', email: 'helen@test.com', avatar: '' } } },
+    ])
+    mockSend.mockRejectedValue(new Error('Server error'))
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text() === 'Delete household')!.trigger('click')
+    await wrapper.vm.$nextTick()
+    const allDeleteBtns = wrapper.findAll('button').filter(b => b.text() === 'Delete household')
+    await allDeleteBtns[allDeleteBtns.length - 1]!.trigger('click')
+    await flushPromises()
+    expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }))
   })
 })

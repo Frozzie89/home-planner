@@ -69,6 +69,17 @@ const inviteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 let inviteCopiedTimer: ReturnType<typeof setTimeout> | null = null
 const removeStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
+// Role management state
+const showPromoteSheet = ref(false)
+const showDemoteSheet = ref(false)
+const showDeleteHouseholdSheet = ref(false)
+const memberToPromote = ref<MemberRecord | null>(null)
+const memberToDemote = ref<MemberRecord | null>(null)
+const promoteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+const demoteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+const deleteHouseholdStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+const lastAdminError = ref('')
+
 const splitRatioSum = computed(() =>
   Object.values(splitRatioForm.value).reduce((sum, v) => sum + (v ?? 0), 0)
 )
@@ -76,6 +87,8 @@ const splitRatioSum = computed(() =>
 const isSplitRatioValid = computed(() => splitRatioSum.value === 100)
 
 const isSingleMember = computed(() => members.value.length === 1)
+const adminCount = computed(() => members.value.filter(m => m.role === 'admin').length)
+const isSoleMember = isSingleMember
 
 const hasChanges = computed(() => {
   if (!originalData.value) return false
@@ -162,6 +175,11 @@ watch([formData, splitRatioForm], () => {
 }, { deep: true })
 
 function handleRemoveMemberRequest(member: MemberRecord) {
+  lastAdminError.value = ''
+  if (member.role === 'admin' && adminCount.value === 1) {
+    lastAdminError.value = 'At least one admin must remain in the household'
+    return
+  }
   memberToRemove.value = member
   showRemoveSheet.value = true
 }
@@ -177,12 +195,96 @@ async function handleRemoveConfirm() {
   removeStatus.value = 'loading'
   try {
     await pb.collection('members').delete(memberToRemove.value.id)
+    lastAdminError.value = ''
     closeRemoveSheet()
     await loadSettings()
     toast.add({ severity: 'success', summary: 'Member removed', life: 3000 })
   } catch {
     toast.add({ severity: 'error', summary: "Couldn't remove member — try again", life: 5000 })
     removeStatus.value = 'error'
+  }
+}
+
+function closePromoteSheet() {
+  showPromoteSheet.value = false
+  memberToPromote.value = null
+  promoteStatus.value = 'idle'
+}
+
+function handlePromoteRequest(member: MemberRecord) {
+  memberToPromote.value = member
+  showPromoteSheet.value = true
+}
+
+async function handlePromoteConfirm() {
+  if (!memberToPromote.value || promoteStatus.value === 'loading') return
+  promoteStatus.value = 'loading'
+  try {
+    await pb.collection('members').update(memberToPromote.value.id, { role: 'admin' })
+    lastAdminError.value = ''
+    closePromoteSheet()
+    await loadSettings()
+    toast.add({ severity: 'success', summary: 'Member promoted to Admin', life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: "Couldn't promote member — try again", life: 5000 })
+    promoteStatus.value = 'error'
+  }
+}
+
+function closeDemoteSheet() {
+  showDemoteSheet.value = false
+  memberToDemote.value = null
+  demoteStatus.value = 'idle'
+}
+
+function handleDemoteRequest(member: MemberRecord) {
+  lastAdminError.value = ''
+  if (member.user_id === authStore.userId && adminCount.value === 1) {
+    lastAdminError.value = 'At least one admin must remain in the household'
+    return
+  }
+  memberToDemote.value = member
+  showDemoteSheet.value = true
+}
+
+async function handleDemoteConfirm() {
+  if (!memberToDemote.value || demoteStatus.value === 'loading') return
+  demoteStatus.value = 'loading'
+  try {
+    const isSelf = memberToDemote.value.user_id === authStore.userId
+    await pb.collection('members').update(memberToDemote.value.id, { role: 'member' })
+    closeDemoteSheet()
+    await loadSettings()
+    toast.add({ severity: 'success', summary: 'Admin demoted to Member', life: 3000 })
+    if (isSelf) {
+      await authStore.loadMembership()
+    }
+  } catch {
+    toast.add({ severity: 'error', summary: "Couldn't demote admin — try again", life: 5000 })
+    demoteStatus.value = 'error'
+  }
+}
+
+function closeDeleteHouseholdSheet() {
+  showDeleteHouseholdSheet.value = false
+  deleteHouseholdStatus.value = 'idle'
+}
+
+function handleDeleteHouseholdRequest() {
+  showDeleteHouseholdSheet.value = true
+}
+
+async function handleDeleteHouseholdConfirm() {
+  if (deleteHouseholdStatus.value === 'loading') return
+  deleteHouseholdStatus.value = 'loading'
+  try {
+    await pb.send('/api/household', { method: 'DELETE' })
+    closeDeleteHouseholdSheet()
+    await authStore.loadMembership()
+    await router.push('/setup')
+  } catch {
+    toast.add({ severity: 'error', summary: "Couldn't delete household — try again", life: 5000 })
+    deleteHouseholdStatus.value = 'error'
   }
 }
 
@@ -359,7 +461,10 @@ async function handleSave() {
           :members="members"
           :current-user-id="authStore.userId ?? ''"
           @remove="handleRemoveMemberRequest"
+          @promote="handlePromoteRequest"
+          @demote="handleDemoteRequest"
         />
+        <p v-if="lastAdminError" class="last-admin-error" role="alert">{{ lastAdminError }}</p>
         <Button
           label="Invite member"
           class="invite-btn"
@@ -367,6 +472,22 @@ async function handleSave() {
           :loading="inviteStatus === 'loading'"
           @click="handleInviteOpen"
         />
+
+        <template v-if="isSoleMember">
+          <p class="section-label danger-section">DANGER ZONE</p>
+          <div class="danger-zone">
+            <p class="danger-description">
+              You are the only member of this household. Deleting it is permanent and cannot be undone.
+            </p>
+            <Button
+              label="Delete household"
+              severity="danger"
+              outlined
+              class="delete-household-btn"
+              @click="handleDeleteHouseholdRequest"
+            />
+          </div>
+        </template>
 
         <Button
           label="Save Changes"
@@ -416,6 +537,55 @@ async function handleSave() {
         severity="danger"
         :loading="removeStatus === 'loading'"
         @click="handleRemoveConfirm"
+      />
+    </div>
+  </BottomSheet>
+
+  <BottomSheet v-model:open="showPromoteSheet" title="Promote to Admin">
+    <p class="confirm-text">
+      Promote <strong>{{ memberToPromote ? getMemberName(memberToPromote) : '' }}</strong> to Admin?
+      They will be able to invite members, manage roles, and change household preferences.
+    </p>
+    <div class="sheet-actions">
+      <Button label="Cancel" text @click="closePromoteSheet" />
+      <Button
+        label="Promote"
+        :loading="promoteStatus === 'loading'"
+        @click="handlePromoteConfirm"
+      />
+    </div>
+  </BottomSheet>
+
+  <BottomSheet v-model:open="showDemoteSheet" title="Demote to Member">
+    <p class="confirm-text">
+      Demote <strong>{{ memberToDemote ? getMemberName(memberToDemote) : '' }}</strong> to Member?
+      They will no longer be able to manage members or household preferences.
+    </p>
+    <div class="sheet-actions">
+      <Button label="Cancel" text @click="closeDemoteSheet" />
+      <Button
+        label="Demote"
+        severity="danger"
+        :loading="demoteStatus === 'loading'"
+        @click="handleDemoteConfirm"
+      />
+    </div>
+  </BottomSheet>
+
+  <BottomSheet v-model:open="showDeleteHouseholdSheet" title="Delete Household">
+    <p class="confirm-text">
+      <strong>This action is permanent and cannot be undone.</strong>
+    </p>
+    <p class="confirm-text">
+      All expenses, meal plans, grocery lists, invitations, and member data for this household will be permanently deleted. There is no recovery.
+    </p>
+    <div class="sheet-actions">
+      <Button label="Cancel" text @click="closeDeleteHouseholdSheet" />
+      <Button
+        label="Delete household"
+        severity="danger"
+        :loading="deleteHouseholdStatus === 'loading'"
+        @click="handleDeleteHouseholdConfirm"
       />
     </div>
   </BottomSheet>
@@ -574,6 +744,38 @@ async function handleSave() {
   color: var(--color-text-primary);
   margin: 0;
   line-height: 1.5;
+}
+
+.last-admin-error {
+  font-size: 0.875rem;
+  color: var(--color-balance-negative);
+  margin: 0;
+  padding: var(--space-1) 0;
+}
+
+.danger-section {
+  color: var(--color-balance-negative);
+}
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-balance-negative) 30%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-balance-negative) 5%, transparent);
+}
+
+.danger-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.delete-household-btn {
+  width: 100%;
 }
 
 @media (min-width: 768px) {
