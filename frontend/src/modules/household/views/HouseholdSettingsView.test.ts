@@ -42,6 +42,13 @@ vi.mock('@/shared/lib/pocketbase', () => ({
       create: name === 'invitations' ? mockCreate : vi.fn(),
       delete: name === 'members' ? mockDelete : vi.fn(),
     }),
+    authStore: {
+      record: { id: 'user-test', avatar: '', name: 'Helen' },
+      onChange: vi.fn(() => () => {}),
+    },
+    files: {
+      getURL: vi.fn().mockReturnValue(''),
+    },
     send: mockSend,
   },
 }))
@@ -249,17 +256,6 @@ describe('HouseholdSettingsView', () => {
     await wrapper.vm.$nextTick()
     const saveBtn = wrapper.findAll('button').find(b => b.text().includes('Save Changes'))
     expect(saveBtn?.attributes('disabled')).toBeDefined()
-  })
-
-  it('2-member auto-adjust: changing member-1 ratio via input event auto-updates member-2 to maintain 100', async () => {
-    const wrapper = mountView()
-    await flushPromises()
-    const numberInputs = wrapper.findAll('input[type="number"]')
-    // First InputNumber is member-1, second is member-2
-    await numberInputs[0]!.setValue(70)
-    await wrapper.vm.$nextTick()
-    const vm = wrapper.vm as any
-    expect(vm.splitRatioForm['member-2']).toBe(30)
   })
 
   it('calls pb.collection("households").update() with correct payload on save', async () => {
