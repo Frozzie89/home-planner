@@ -138,7 +138,7 @@ onMounted(async () => {
   max-width: 320px;
   margin: 0 auto var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: var(--p-primary-color);
+  background: color-mix(in srgb, var(--p-primary-color), black 20%);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -159,13 +159,13 @@ onMounted(async () => {
 }
 
 .invite-error-msg {
-  color: var(--color-balance-negative);
+  color: color-mix(in srgb, var(--color-balance-negative, #c96148), black 30%);
   font-size: 0.875rem;
   margin-bottom: var(--space-2);
 }
 
 .invite-home-link {
-  color: var(--p-primary-color);
+  color: color-mix(in srgb, var(--p-primary-color), black 30%);
   font-size: 0.875rem;
   text-decoration: underline;
 }

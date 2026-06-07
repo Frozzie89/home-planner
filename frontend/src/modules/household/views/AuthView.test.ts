@@ -95,7 +95,7 @@ describe('AuthView', () => {
       mockAuthWithOAuth2Code.mockResolvedValue({})
     })
 
-    it('path 3: household exists, user not a member → logout + redirect + show message + load providers', async () => {
+    it('path 3: household exists, user not a member -> logout + redirect + show message + load providers', async () => {
       mockSend.mockResolvedValue({ exists: true })
 
       const wrapper = mountView()
@@ -108,7 +108,7 @@ describe('AuthView', () => {
       expect(mockListAuthMethods).toHaveBeenCalled()
     })
 
-    it('path 1: no household exists → redirect to /setup, no logout', async () => {
+    it('path 1: no household exists -> redirect to /setup, no logout', async () => {
       mockSend.mockResolvedValue({ exists: false })
 
       mountView()
@@ -118,7 +118,7 @@ describe('AuthView', () => {
       expect(mockRouterReplace).toHaveBeenCalledWith('/setup')
     })
 
-    it('path 2: user has membership → redirect to /finances, no existence check', async () => {
+    it('path 2: user has membership -> redirect to /finances, no existence check', async () => {
       mockAuthStore.householdId = 'hh-123'
 
       mountView()
@@ -131,7 +131,7 @@ describe('AuthView', () => {
   })
 
   describe('onMounted() — error query param handling', () => {
-    it('?error=not_registered → notRegisteredMessage shown, sign-in form rendered, loadProviders called', async () => {
+    it('?error=not_registered -> notRegisteredMessage shown, sign-in form rendered, loadProviders called', async () => {
       setLocation('?error=not_registered')
       mockListAuthMethods.mockResolvedValue({
         oauth2: {
@@ -148,7 +148,7 @@ describe('AuthView', () => {
       expect(mockListAuthMethods).toHaveBeenCalled()
     })
 
-    it('?error=access_denied → error overlay shown, notRegisteredMessage empty, loadProviders not called', async () => {
+    it('?error=access_denied -> error overlay shown, notRegisteredMessage empty, loadProviders not called', async () => {
       setLocation('?error=access_denied')
 
       const wrapper = mountView()

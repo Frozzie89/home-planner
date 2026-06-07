@@ -161,7 +161,7 @@ describe('MemberList', () => {
     const wrapper = mount(MemberList, {
       props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
     })
-    // member-2 has role='member' → should have Promote
+    // member-2 has role='member' -> should have Promote
     expect(wrapper.findAll('.promote-btn')).toHaveLength(1)
   })
 
@@ -169,7 +169,7 @@ describe('MemberList', () => {
     const wrapper = mount(MemberList, {
       props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
     })
-    // member-1 is admin → no Promote button; member-2 is member → has Promote
+    // member-1 is admin -> no Promote button; member-2 is member -> has Promote
     const adminRow = wrapper.findAll('li').find(li => li.text().includes('Admin'))
     expect(adminRow!.find('.promote-btn').exists()).toBe(false)
     expect(wrapper.findAll('.promote-btn')).toHaveLength(1)
@@ -179,7 +179,7 @@ describe('MemberList', () => {
     const wrapper = mount(MemberList, {
       props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
     })
-    // member-1 is admin → should have Demote
+    // member-1 is admin -> should have Demote
     expect(wrapper.findAll('.demote-btn')).toHaveLength(1)
   })
 
@@ -187,7 +187,7 @@ describe('MemberList', () => {
     const wrapper = mount(MemberList, {
       props: { members: MOCK_MEMBERS, currentUserId: 'other-user' },
     })
-    // member-2 is member → no Demote button; only member-1 (admin) has Demote
+    // member-2 is member -> no Demote button; only member-1 (admin) has Demote
     const memberRow = wrapper.findAll('li').find(li => li.text().includes('Alex'))
     expect(memberRow!.find('.demote-btn').exists()).toBe(false)
     expect(wrapper.findAll('.demote-btn')).toHaveLength(1)
@@ -218,7 +218,7 @@ describe('MemberList', () => {
     const wrapper = mount(MemberList, {
       props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
     })
-    // member-1 has user_id='user-admin' and role='admin' → Demote should show
+    // member-1 has user_id='user-admin' and role='admin' -> Demote should show
     expect(wrapper.findAll('.demote-btn')).toHaveLength(1)
   })
 

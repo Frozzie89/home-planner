@@ -5,7 +5,7 @@ import { injectAuth, mockMembersApi, mockRemainingPbCalls } from './helpers/auth
 const PB_URL = 'http://pb.home-planner.localhost'
 
 test('finances view renders without WCAG 2.1 AA violations', async ({ page }) => {
-  // Auth valid + householdId set → router allows /finances
+  // Auth valid + householdId set -> router allows /finances
   await injectAuth(page)
   // Catch-all registered first so specific routes below take precedence (Playwright LIFO)
   await mockRemainingPbCalls(page)

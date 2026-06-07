@@ -434,6 +434,7 @@ async function handleSave() {
                   :min="0"
                   :max="100"
                   :max-fraction-digits="0"
+                  :aria-label="`${getMemberName(member)} split ratio percentage`"
                 />
                 <span class="pct-sign">%</span>
               </div>
@@ -717,11 +718,11 @@ async function handleSave() {
 }
 
 .split-sum.valid {
-  color: var(--color-balance-positive, #22c55e);
+  color: color-mix(in srgb, var(--color-balance-positive, #4a9068), black 30%);
 }
 
 .split-sum.invalid {
-  color: var(--color-balance-negative);
+  color: color-mix(in srgb, var(--color-balance-negative, #c96148), black 30%);
 }
 
 /* Members card */
@@ -733,6 +734,10 @@ async function handleSave() {
 .invite-btn {
   width: 100%;
   margin-top: var(--space-1);
+}
+
+:deep(.invite-btn .p-button-label) {
+  color: color-mix(in srgb, var(--p-primary-color), black 30%);
 }
 
 .last-admin-error {
