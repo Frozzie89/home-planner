@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouterView } from 'vue-router'
 import { useAuthStore } from '@/shared/stores/auth'
+import { useHouseholdStore } from '@/modules/household/stores/household'
 import { pb } from '@/shared/lib/pocketbase'
 
 declare module 'vue-router' {
@@ -74,9 +75,18 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
+  const householdStore = useHouseholdStore()
 
   if (authStore.initStatus !== 'success') {
     await authStore.init()
+  }
+
+  if (authStore.householdId && !householdStore.id) {
+    try {
+      await householdStore.load(authStore.householdId)
+    } catch {
+      // Non-critical — household name in nav bar stays empty if the fetch fails
+    }
   }
 
   if (to.meta.public) {

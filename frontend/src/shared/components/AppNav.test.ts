@@ -45,6 +45,12 @@ vi.mock('@/shared/stores/auth', () => ({
   }),
 }))
 
+vi.mock('@/modules/household/stores/household', () => ({
+  useHouseholdStore: () => ({
+    name: 'The Hostel',
+  }),
+}))
+
 function makeRouter(initialPath = '/finances') {
   const router = createRouter({
     history: createWebHistory(),
@@ -144,41 +150,46 @@ describe('AppNav', () => {
     })
   })
 
-  describe('header add button', () => {
-    it('shows "+ Add expense" button on /finances route', async () => {
+  describe('inline nav links (desktop)', () => {
+    it('renders Finances and Food nav links', async () => {
       const wrapper = await mountNav('/finances')
-      const btn = wrapper.find('.header-add-btn')
-      expect(btn.exists()).toBe(true)
-      expect(btn.text()).toBe('+ Add expense')
+      const nav = wrapper.find('[aria-label="Primary navigation"]')
+      expect(nav.exists()).toBe(true)
+      const links = nav.findAll('a')
+      expect(links).toHaveLength(2)
+      expect(links[0]!.text()).toBe('Finances')
+      expect(links[1]!.text()).toBe('Food')
     })
 
-    it('shows "+ Add item" button on /food route', async () => {
+    it('marks Finances link active on /finances route', async () => {
+      const wrapper = await mountNav('/finances')
+      const nav = wrapper.find('[aria-label="Primary navigation"]')
+      const links = nav.findAll('a')
+      expect(links[0]!.attributes('aria-current')).toBe('page')
+      expect(links[1]!.attributes('aria-current')).toBeUndefined()
+    })
+
+    it('marks Food link active on /food/meal-plan route', async () => {
       const wrapper = await mountNav('/food/meal-plan')
-      const btn = wrapper.find('.header-add-btn')
-      expect(btn.exists()).toBe(true)
-      expect(btn.text()).toBe('+ Add item')
+      const nav = wrapper.find('[aria-label="Primary navigation"]')
+      const links = nav.findAll('a')
+      expect(links[0]!.attributes('aria-current')).toBeUndefined()
+      expect(links[1]!.attributes('aria-current')).toBe('page')
     })
+  })
 
-    it('emits open-add-action when header button is clicked', async () => {
+  describe('profile pill', () => {
+    it('shows household name inside the profile pill', async () => {
       const wrapper = await mountNav('/finances')
-      await wrapper.find('.header-add-btn').trigger('click')
-      expect(wrapper.emitted('open-add-action')).toHaveLength(1)
-    })
-
-    it('does not show header button on /settings route', async () => {
-      const router = makeRouter('/settings')
-      await router.isReady()
-      const wrapper = mount(AppNav, {
-        global: { plugins: [createPinia(), router] },
-      })
-      expect(wrapper.find('.header-add-btn').exists()).toBe(false)
+      const pill = wrapper.find('[aria-label="My profile — The Hostel"]')
+      expect(pill.find('.household-name').text()).toBe('The Hostel')
     })
   })
 
   describe('profile link', () => {
-    it('retains aria-label="My profile" on the profile link', async () => {
+    it('includes household name in profile link aria-label', async () => {
       const wrapper = await mountNav('/finances')
-      const profileLink = wrapper.find('[aria-label="My profile"]')
+      const profileLink = wrapper.find('[aria-label="My profile — The Hostel"]')
       expect(profileLink.exists()).toBe(true)
     })
   })

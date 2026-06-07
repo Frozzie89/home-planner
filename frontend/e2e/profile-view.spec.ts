@@ -6,6 +6,7 @@ import {
   mockMembersApi,
   mockSettingsMembersApi,
   mockProfileMemberApi,
+  mockHouseholdsApi,
 } from './helpers/auth'
 
 // Profile view setup: auth store init via mockMembersApi (getFirstListItem),
@@ -13,6 +14,7 @@ import {
 async function setupProfileMocks(page: Parameters<typeof mockMembersApi>[0], role: 'admin' | 'member') {
   await injectAuth(page)
   await mockRemainingPbCalls(page)
+  await mockHouseholdsApi(page)              // router guard calls householdStore.load() on first nav
   await mockMembersApi(page, true)           // handles auth store's getFirstListItem (admin role)
   await mockProfileMemberApi(page, role)     // handles ProfileView's getOne (LIFO — wins for /records/:id)
 }
@@ -63,6 +65,7 @@ test('leave household button is visible for a non-admin member', async ({ page }
     // which is what controls the leave section visibility (isNonAdminMember computed)
     await injectAuth(page)
     await mockRemainingPbCalls(page)
+    await mockHouseholdsApi(page)
     await mockSettingsMembersApi(page, { currentUserRole: 'member' })
     await mockProfileMemberApi(page, 'member')
   })
@@ -96,6 +99,7 @@ test('leave household confirmation sheet appears and can be cancelled', async ({
   await test.step('Set up mocks as member role', async () => {
     await injectAuth(page)
     await mockRemainingPbCalls(page)
+    await mockHouseholdsApi(page)
     await mockSettingsMembersApi(page, { currentUserRole: 'member' })
     await mockProfileMemberApi(page, 'member')
   })

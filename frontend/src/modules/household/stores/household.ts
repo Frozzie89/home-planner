@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import { pb } from '@/shared/lib/pocketbase'
 import type { HouseholdConfig } from '@/modules/household/types'
 
 export const useHouseholdStore = defineStore('household', () => {
@@ -17,6 +18,12 @@ export const useHouseholdStore = defineStore('household', () => {
     reminder_day.value = config.reminder_day
   }
 
+  async function load(householdId: string) {
+    if (id.value === householdId) return
+    const config = await pb.collection('households').getOne<HouseholdConfig>(householdId)
+    populate(config)
+  }
+
   function reset() {
     id.value = null
     name.value = null
@@ -25,5 +32,5 @@ export const useHouseholdStore = defineStore('household', () => {
     reminder_day.value = 'Monday'
   }
 
-  return { id, name, currency, split_ratios, reminder_day, populate, reset }
+  return { id, name, currency, split_ratios, reminder_day, populate, load, reset }
 })
