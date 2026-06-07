@@ -154,6 +154,81 @@ export async function mockHouseholdsApi(page: Page) {
   )
 }
 
+// ─── Auth callback helpers ────────────────────────────────────────────────────
+
+// State token shared between injectOAuthProviderSession and callback URL params.
+// Must be the same string so handleCallback passes the state-mismatch guard.
+export const OAUTH_TEST_STATE = 'test-state-xyz'
+
+// Seeds sessionStorage before page load so AuthView.handleCallback finds the
+// provider record when it processes ?code=...&state=... query params.
+export async function injectOAuthProviderSession(page: Page, state = OAUTH_TEST_STATE) {
+  await page.addInitScript(
+    ({ state }) => {
+      sessionStorage.setItem(
+        'oauth_provider',
+        JSON.stringify({ name: 'google', state, codeVerifier: 'test-verifier' }),
+      )
+    },
+    { state },
+  )
+}
+
+// Mocks POST /api/collections/users/auth-with-oauth2 — the PocketBase SDK
+// processes this response and calls pb.authStore.save(token, record), which makes
+// pb.authStore.isValid = true and sets pb.authStore.record.id = MOCK_USER_ID.
+// Note: the SDK method is authWithOAuth2Code() but the HTTP endpoint is auth-with-oauth2 (no "-code").
+export async function mockOAuth2CodeExchange(page: Page) {
+  await page.route(`${PB_URL}/api/collections/users/auth-with-oauth2*`, (route) => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: FAKE_TOKEN,
+          record: { id: MOCK_USER_ID, email: 'smoke@test.local', username: 'smokeuser', name: 'Smoke User', verified: true },
+        }),
+      })
+    } else {
+      route.abort()
+    }
+  })
+}
+
+// Mocks GET /api/household/exists — called by AuthView when householdId is null
+// to distinguish path 1 (no household -> /setup) from path 3 (rejected -> /auth).
+export async function mockHouseholdExistsApi(page: Page, exists: boolean) {
+  await page.route(`${PB_URL}/api/household/exists*`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ exists }),
+    }),
+  )
+}
+
+// Mocks GET /api/collections/users/auth-methods — returns a single Google OAuth2
+// provider. Used by AuthView and InviteAcceptView to render sign-in buttons.
+// PocketBase SDK appends ?fields=... so the wildcard suffix is required.
+export async function mockAuthMethodsApi(page: Page) {
+  await page.route(`${PB_URL}/api/collections/users/auth-methods*`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        emailPassword: { enabled: false },
+        mfa: { enabled: false },
+        oauth2: {
+          enabled: true,
+          providers: [
+            { name: 'google', displayName: 'Google', state: 'fresh-state', codeVerifier: 'fresh-verifier', authURL: 'https://accounts.google.com/o/oauth2/auth' },
+          ],
+        },
+      }),
+    }),
+  )
+}
+
 // Mock GET /api/collections/members/records/:memberId — used by ProfileView's getOne.
 // Registered after mockMembersApi (LIFO) so it matches the specific ID path first.
 export async function mockProfileMemberApi(page: Page, role: 'admin' | 'member' = 'member') {
