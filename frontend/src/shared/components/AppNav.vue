@@ -104,10 +104,11 @@ async function goTo(path: string) {
 </template>
 
 <style scoped>
+/* Mobile-first: shell fills the viewport exactly; content scrolls inside */
 .app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100dvh;
 }
 
 /* Header */
@@ -117,11 +118,9 @@ async function goTo(path: string) {
   justify-content: space-between;
   padding: 0 var(--space-2);
   height: 56px;
+  flex-shrink: 0;
   background-color: var(--p-surface-card);
   border-bottom: 1px solid var(--p-surface-border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .header-left,
@@ -238,25 +237,23 @@ async function goTo(path: string) {
   white-space: nowrap;
 }
 
-/* Main content */
+/* Main content — scrolls internally on mobile */
 .app-content {
   flex: 1;
-  padding: var(--space-2) var(--space-2) calc(64px + var(--space-2));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-2);
 }
 
-/* Bottom nav — visible on mobile */
+/* Bottom nav — natural flex item on mobile, no fixed positioning needed */
 .bottom-nav {
   display: flex;
+  flex-shrink: 0;
   margin: 0;
   padding: 0;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   height: 64px;
   background-color: var(--p-surface-card);
   border-top: 1px solid var(--p-surface-border);
-  z-index: 10;
 }
 
 .bottom-tab {
@@ -303,15 +300,28 @@ async function goTo(path: string) {
     border: 1px solid var(--p-surface-border);
   }
 
-  .bottom-nav {
-    display: none;
+  /* Desktop: revert to natural page scroll */
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
   .app-content {
+    overflow-y: visible;
     max-width: 640px;
     margin: 0 auto;
     width: 100%;
     padding-bottom: var(--space-2);
+  }
+
+  .bottom-nav {
+    display: none;
   }
 
   .app-content.content-wide {
