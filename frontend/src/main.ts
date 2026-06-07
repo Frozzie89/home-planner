@@ -9,7 +9,6 @@ import 'primeicons/primeicons.css'
 
 import App from './App.vue'
 import router from './router'
-import { useAuthStore } from '@/shared/stores/auth'
 
 const HomePlannerPreset = definePreset(Aura, {
   semantic: {
@@ -91,7 +90,6 @@ app.use(PrimeVue, {
 })
 app.use(ToastService)
 
-const authStore = useAuthStore()
-await authStore.init()
+await router.isReady()
 
 app.mount('#app')

@@ -95,14 +95,17 @@ describe('AuthView', () => {
       mockAuthWithOAuth2Code.mockResolvedValue({})
     })
 
-    it('path 3: household exists, user not a member → logout + redirect to /auth?error=not_registered', async () => {
+    it('path 3: household exists, user not a member → logout + redirect + show message + load providers', async () => {
       mockSend.mockResolvedValue({ exists: true })
 
-      mountView()
+      const wrapper = mountView()
       await flushPromises()
 
       expect(mockLogout).toHaveBeenCalledOnce()
       expect(mockRouterReplace).toHaveBeenCalledWith('/auth?error=not_registered')
+      expect(wrapper.find('.auth-not-registered').exists()).toBe(true)
+      expect(wrapper.text()).toContain("This account isn't linked to this household")
+      expect(mockListAuthMethods).toHaveBeenCalled()
     })
 
     it('path 1: no household exists → redirect to /setup, no logout', async () => {

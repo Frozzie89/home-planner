@@ -156,6 +156,10 @@ async function handleCallback(code: string, state: string) {
       // Path 3: household exists but this user has no membership → reject at auth layer
       authStore.logout()
       router.replace('/auth?error=not_registered')
+      // router.replace won't re-trigger onMounted — we're already on /auth, so set state directly
+      callbackStatus.value = 'idle'
+      notRegisteredMessage.value = "This account isn't linked to this household. You'll need an invitation link to join."
+      await loadProviders()
     } else {
       // Path 1: no household on this instance → bootstrapper flow
       router.replace('/setup')
