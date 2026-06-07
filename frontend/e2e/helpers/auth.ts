@@ -29,8 +29,8 @@ export async function injectAuth(page: Page, options: { householdId?: string | n
 }
 
 // Mock the members lookup that authStore.init() makes.
-// `respondWithMember: true` → returns a member record (use for /finances)
-// `respondWithMember: false` → returns 404 (use for /setup — user has no household yet)
+// `respondWithMember: true` -> returns a member record (use for /finances)
+// `respondWithMember: false` -> returns 404 (use for /setup — user has no household yet)
 export async function mockMembersApi(page: Page, respondWithMember: boolean) {
   await page.route(`${PB_URL}/api/collections/members/records*`, (route) => {
     if (respondWithMember) {
@@ -55,7 +55,7 @@ export async function mockMembersApi(page: Page, respondWithMember: boolean) {
         }),
       })
     } else {
-      // 404 → loadMembership() sets householdId = null → router allows /setup
+      // 404 -> loadMembership() sets householdId = null -> router allows /setup
       route.fulfill({
         status: 404,
         contentType: 'application/json',

@@ -88,7 +88,7 @@ test('invite member sheet opens and displays a link input', async ({ page }) => 
   await test.step('Mock invitations endpoint', async () => {
     await page.route(`${PB_URL}/api/collections/invitations/records*`, (route) => {
       if (route.request().method() === 'POST') {
-        // POST → return the created invite record
+        // POST -> return the created invite record
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -100,7 +100,7 @@ test('invite member sheet opens and displays a link input', async ({ page }) => 
           }),
         })
       } else {
-        // GET (getFirstListItem) → 404 triggers creation of a new invite
+        // GET (getFirstListItem) -> 404 triggers creation of a new invite
         route.fulfill({
           status: 404,
           contentType: 'application/json',
