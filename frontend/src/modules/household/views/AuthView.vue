@@ -12,6 +12,9 @@
 
     <div v-else class="auth-signin">
       <h1>Home Planner</h1>
+      <div v-if="notRegisteredMessage" class="auth-not-registered">
+        <p>{{ notRegisteredMessage }}</p>
+      </div>
       <div v-if="providersStatus === 'loading'">
         <span>Loading…</span>
       </div>
@@ -59,6 +62,7 @@ const callbackStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 const providersStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 const providers = ref<OAuth2Provider[]>([])
 const errorMessage = ref('')
+const notRegisteredMessage = ref('')
 
 function capitalise(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1)
@@ -143,7 +147,17 @@ async function handleCallback(code: string, state: string) {
 
     if (authStore.householdId) {
       router.replace('/finances')
+      return
+    }
+
+    // householdId is null: distinguish path 1 (no household) from path 3 (household exists, not a member)
+    const existsResponse = await pb.send<{ exists: boolean }>('/api/household/exists', { method: 'GET' })
+    if (existsResponse.exists) {
+      // Path 3: household exists but this user has no membership → reject at auth layer
+      authStore.logout()
+      router.replace('/auth?error=not_registered')
     } else {
+      // Path 1: no household on this instance → bootstrapper flow
       router.replace('/setup')
     }
   } catch {
@@ -159,7 +173,10 @@ onMounted(async () => {
   const state = params.get('state')
   const error = params.get('error')
 
-  if (error) {
+  if (error === 'not_registered') {
+    notRegisteredMessage.value = "This account isn't linked to this household. You'll need an invitation link to join."
+    // Fall through to loadProviders() — sign-in form shown with message
+  } else if (error) {
     callbackStatus.value = 'error'
     errorMessage.value = 'Sign-in was denied by the provider. Please try again.'
     return
@@ -179,3 +196,12 @@ onMounted(async () => {
   await loadProviders()
 })
 </script>
+
+<style scoped>
+.auth-not-registered {
+  margin-bottom: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-left: 3px solid var(--p-accent);
+  color: var(--p-text-color);
+}
+</style>
