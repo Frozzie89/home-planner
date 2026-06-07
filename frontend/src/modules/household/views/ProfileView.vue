@@ -74,11 +74,12 @@ async function handleLeaveConfirm() {
     await pb.send('/api/household/leave', { method: 'POST' })
     leaveSucceeded = true
     showLeaveSheet.value = false
-    await authStore.loadMembership()
-    await router.push('/setup')
+    authStore.logout()
+    router.push('/auth')
   } catch {
     if (leaveSucceeded) {
-      await router.push('/setup')
+      authStore.logout()
+      router.push('/auth')
     } else {
       toast.add({ severity: 'error', summary: "Couldn't leave — try again", life: 5000 })
       leaveStatus.value = 'error'
@@ -131,6 +132,7 @@ async function save() {
     <p class="confirm-text">
       You will lose access to <strong>{{ householdStore.name ?? 'your household' }}</strong> immediately.
       Your expense history will be preserved.
+      Once you leave, you'll need a new invitation to rejoin.
     </p>
     <div class="sheet-actions">
       <Button label="Cancel" text @click="showLeaveSheet = false; leaveStatus = 'idle'" />

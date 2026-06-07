@@ -268,10 +268,9 @@ describe('ProfileView', () => {
       expect(wrapper.find('[data-testid="bottom-sheet"]').exists()).toBe(true)
     })
 
-    it('confirming leave calls pb.send, authStore.loadMembership, then router.push("/setup")', async () => {
+    it('confirming leave calls pb.send, authStore.logout, then router.push("/auth")', async () => {
       mockGetOne.mockResolvedValue(MOCK_MEMBER)
       mockSend.mockResolvedValue({ message: 'Left household' })
-      mockLoadMembership.mockResolvedValue(undefined)
       mockRouterPush.mockResolvedValue(undefined)
       const wrapper = mountView()
       await flushPromises()
@@ -285,8 +284,23 @@ describe('ProfileView', () => {
       await flushPromises()
 
       expect(mockSend).toHaveBeenCalledWith('/api/household/leave', { method: 'POST' })
-      expect(mockLoadMembership).toHaveBeenCalledOnce()
-      expect(mockRouterPush).toHaveBeenCalledWith('/setup')
+      expect(mockLogout).toHaveBeenCalledOnce()
+      expect(mockLoadMembership).not.toHaveBeenCalled()
+      expect(mockRouterPush).toHaveBeenCalledWith('/auth')
+    })
+
+    it('leave confirmation dialog contains re-invite warning', async () => {
+      mockGetOne.mockResolvedValue(MOCK_MEMBER)
+      const wrapper = mountView()
+      await flushPromises()
+
+      const leaveBtn = wrapper.findAll('button').find(b => b.text() === 'Leave household')
+      await leaveBtn!.trigger('click')
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find('[data-testid="bottom-sheet"]').text()).toContain(
+        "Once you leave, you'll need a new invitation to rejoin."
+      )
     })
 
     it('shows error toast when leave API call fails', async () => {
