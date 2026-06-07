@@ -482,7 +482,7 @@ describe('HouseholdSettingsView', () => {
   // --- PROMOTE ---
 
   it('@promote event from MemberList opens promote confirmation BottomSheet', async () => {
-    // MOCK_MEMBERS: member-2 has role='member' → promote-btn-stub renders
+    // MOCK_MEMBERS: member-2 has role='member' -> promote-btn-stub renders
     const wrapper = mountView()
     await flushPromises()
     const promoteBtn = wrapper.find('.promote-btn-stub')
@@ -579,7 +579,7 @@ describe('HouseholdSettingsView', () => {
 
   it('blocks remove on last admin — shows inline error, no remove sheet opens', async () => {
     // MOCK_MEMBERS: member-1 (admin, user-1), member-2 (member)
-    // adminCount === 1, member-1 role === 'admin' → block remove on member-1
+    // adminCount === 1, member-1 role === 'admin' -> block remove on member-1
     const wrapper = mountView()
     await flushPromises()
     // remove-btn-stub for member-1 (admin) — first remove button
@@ -595,7 +595,7 @@ describe('HouseholdSettingsView', () => {
   it('"Delete household" section NOT visible when multiple members', async () => {
     const wrapper = mountView()
     await flushPromises()
-    // MOCK_MEMBERS has 2 members → isSoleMember = false
+    // MOCK_MEMBERS has 2 members -> isSoleMember = false
     expect(wrapper.text()).not.toContain('Delete household')
   })
 

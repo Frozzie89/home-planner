@@ -344,6 +344,10 @@ async function save() {
   width: 100%;
 }
 
+:deep(.sign-out-btn .p-button-label) {
+  color: #5c6b7c;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

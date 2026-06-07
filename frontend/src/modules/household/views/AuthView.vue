@@ -22,7 +22,7 @@
         <p>{{ errorMessage }}</p>
       </div>
       <div v-else-if="providers.length === 0">
-        <p>No sign-in providers are configured on this instance. If you manage this server, enable at least one OAuth2 provider in the PocketBase admin panel under Settings → Auth providers.</p>
+        <p>No sign-in providers are configured on this instance. If you manage this server, enable at least one OAuth2 provider in the PocketBase admin panel under Settings -> Auth providers.</p>
       </div>
       <div v-else>
         <button
@@ -153,7 +153,7 @@ async function handleCallback(code: string, state: string) {
     // householdId is null: distinguish path 1 (no household) from path 3 (household exists, not a member)
     const existsResponse = await pb.send<{ exists: boolean }>('/api/household/exists', { method: 'GET' })
     if (existsResponse.exists) {
-      // Path 3: household exists but this user has no membership → reject at auth layer
+      // Path 3: household exists but this user has no membership -> reject at auth layer
       authStore.logout()
       router.replace('/auth?error=not_registered')
       // router.replace won't re-trigger onMounted — we're already on /auth, so set state directly
@@ -161,7 +161,7 @@ async function handleCallback(code: string, state: string) {
       notRegisteredMessage.value = "This account isn't linked to this household. You'll need an invitation link to join."
       await loadProviders()
     } else {
-      // Path 1: no household on this instance → bootstrapper flow
+      // Path 1: no household on this instance -> bootstrapper flow
       router.replace('/setup')
     }
   } catch {

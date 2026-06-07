@@ -103,7 +103,7 @@ const sortedMembers = computed(() =>
 
 .role-badge.admin {
   background: color-mix(in srgb, var(--p-primary-color) 15%, transparent);
-  color: var(--p-primary-color);
+  color: color-mix(in srgb, var(--p-primary-color), black 50%);
 }
 
 .you-badge {
@@ -112,7 +112,7 @@ const sortedMembers = computed(() =>
   border-radius: 12px;
   font-weight: 500;
   background: color-mix(in srgb, var(--p-accent) 15%, transparent);
-  color: var(--p-accent);
+  color: color-mix(in srgb, var(--p-accent), black 50%);
 }
 
 .member-actions {
@@ -127,7 +127,7 @@ const sortedMembers = computed(() =>
   padding: 0 var(--space-1);
   background: none;
   border: 1px solid var(--p-primary-color);
-  color: var(--p-primary-color);
+  color: color-mix(in srgb, var(--p-primary-color), black 30%);
   border-radius: 6px;
   cursor: pointer;
   font-family: inherit;
@@ -137,7 +137,7 @@ const sortedMembers = computed(() =>
   font-size: 0.75rem;
   min-height: 32px;
   padding: 0 var(--space-1);
-  color: var(--color-balance-negative);
+  color: color-mix(in srgb, var(--color-balance-negative, #c96148), black 30%);
   background: none;
   border: 1px solid var(--color-balance-negative);
   border-radius: 6px;
