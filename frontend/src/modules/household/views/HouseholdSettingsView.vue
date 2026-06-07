@@ -692,17 +692,26 @@ async function handleSave() {
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  min-width: 0; /* allow truncation in flex */
 }
 
 .member-name {
   font-size: 0.875rem;
   color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .split-input-group {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.split-input-group :deep(.p-inputnumber-input) {
+  width: 72px;
 }
 
 .pct-sign {

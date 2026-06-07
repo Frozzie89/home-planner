@@ -13,7 +13,7 @@ uiStore.initTheme()
   <template v-if="route.meta.shellExcluded">
     <RouterView />
   </template>
-  <AppNav v-else @open-add-action="() => {}">
+  <AppNav v-else>
     <RouterView />
   </AppNav>
 </template>

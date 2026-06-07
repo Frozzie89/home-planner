@@ -5,6 +5,7 @@ import {
   mockAuthMethodsApi,
   mockOAuth2CodeExchange,
   mockHouseholdExistsApi,
+  mockHouseholdsApi,
   injectOAuthProviderSession,
   OAUTH_TEST_STATE,
 } from './helpers/auth'
@@ -25,6 +26,7 @@ test('oauth2 callback: registered member is redirected to /finances', async ({ p
         body: JSON.stringify({ page: 1, perPage: 30, totalItems: 0, totalPages: 0, items: [] }),
       }),
     )
+    await mockHouseholdsApi(page)    // router guard calls householdStore.load() after OAuth2 success
     await mockOAuth2CodeExchange(page)
     await mockMembersApi(page, true) // returns member record -> authStore.householdId is set
   })
