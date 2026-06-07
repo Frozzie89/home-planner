@@ -3,16 +3,14 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/shared/stores/auth'
 import { useUiStore } from '@/shared/stores/ui'
+import { useHouseholdStore } from '@/modules/household/stores/household'
 import UserAvatar from '@/shared/components/UserAvatar.vue'
-
-const emit = defineEmits<{
-  'open-add-action': []
-}>()
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
+const householdStore = useHouseholdStore()
 
 const isFinancesActive = computed(() => route.path.startsWith('/finances'))
 const isFoodActive = computed(() => route.path.startsWith('/food'))
@@ -21,68 +19,60 @@ const isWideContent = computed(() => route.path === '/settings')
 async function goTo(path: string) {
   try { await router.push(path) } catch { /* NavigationFailure — user already on route */ }
 }
-
-const headerButtonLabel = computed(() => {
-  if (isFinancesActive.value) return '+ Add expense'
-  if (isFoodActive.value) return '+ Add item'
-  return null
-})
 </script>
 
 <template>
   <div class="app-shell">
     <header class="app-header">
-      <h1 class="app-title">Home Planner</h1>
-      <div class="header-actions">
+      <div class="header-left">
+        <RouterLink to="/finances" class="logo-link" aria-hidden="true" tabindex="-1">
+          <i class="pi pi-home" />
+        </RouterLink>
+        <span class="app-title">Home Planner</span>
+        <nav class="inline-nav" aria-label="Primary navigation">
+          <RouterLink
+            to="/finances"
+            class="nav-link"
+            :class="{ active: isFinancesActive }"
+            :aria-current="isFinancesActive ? 'page' : undefined"
+          >Finances</RouterLink>
+          <RouterLink
+            to="/food/meal-plan"
+            class="nav-link"
+            :class="{ active: isFoodActive }"
+            :aria-current="isFoodActive ? 'page' : undefined"
+          >Food</RouterLink>
+        </nav>
+      </div>
+
+      <div class="header-right">
         <button
-          class="theme-toggle"
+          type="button"
+          class="icon-btn"
           aria-label="Toggle dark mode"
           @click="uiStore.toggleTheme()"
         >
           <i :class="uiStore.isDark ? 'pi pi-sun' : 'pi pi-moon'" />
         </button>
         <RouterLink
-          to="/profile"
-          class="profile-link"
-          aria-label="My profile"
-        >
-          <UserAvatar />
-        </RouterLink>
-        <RouterLink
           v-if="authStore.role === 'admin'"
           to="/settings"
-          class="settings-link"
+          class="icon-btn"
           aria-label="Household settings"
         >
-          <i class="pi pi-cog" style="font-size: 24px" />
+          <i class="pi pi-cog" />
         </RouterLink>
-        <button
-          v-if="headerButtonLabel"
-          class="header-add-btn"
-          @click="emit('open-add-action')"
+        <RouterLink
+          to="/profile"
+          class="profile-pill"
+          :aria-label="householdStore.name ? `My profile — ${householdStore.name}` : 'My profile'"
         >
-          {{ headerButtonLabel }}
-        </button>
+          <UserAvatar :size="32" />
+          <span v-if="householdStore.name" class="household-name">{{ householdStore.name }}</span>
+        </RouterLink>
       </div>
     </header>
 
-    <!-- Desktop only: top tab nav -->
-    <nav class="top-nav" role="navigation" aria-label="Primary navigation">
-      <RouterLink
-        to="/finances"
-        class="top-nav-link"
-        :class="{ active: isFinancesActive }"
-        :aria-current="isFinancesActive ? 'page' : undefined"
-      >Finances</RouterLink>
-      <RouterLink
-        to="/food/meal-plan"
-        class="top-nav-link"
-        :class="{ active: isFoodActive }"
-        :aria-current="isFoodActive ? 'page' : undefined"
-      >Food</RouterLink>
-    </nav>
-
-    <!-- Main content -->
     <main class="app-content" :class="{ 'content-wide': isWideContent }">
       <slot />
     </main>
@@ -90,6 +80,7 @@ const headerButtonLabel = computed(() => {
     <!-- Mobile only: bottom navigation bar -->
     <nav class="bottom-nav" aria-label="Bottom navigation">
       <button
+        type="button"
         class="bottom-tab"
         :aria-current="isFinancesActive ? 'page' : undefined"
         :class="{ active: isFinancesActive }"
@@ -99,6 +90,7 @@ const headerButtonLabel = computed(() => {
         <span>Finances</span>
       </button>
       <button
+        type="button"
         class="bottom-tab"
         :aria-current="isFoodActive ? 'page' : undefined"
         :class="{ active: isFoodActive }"
@@ -132,80 +124,118 @@ const headerButtonLabel = computed(() => {
   z-index: 10;
 }
 
-.app-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  margin: 0;
-  color: var(--color-text-primary);
-}
-
-.header-actions {
+.header-left,
+.header-right {
   display: flex;
   align-items: center;
+  align-self: stretch;
   gap: var(--space-1);
 }
 
-.theme-toggle,
-.profile-link,
-.settings-link {
+/* Logo / house icon */
+.logo-link {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  min-width: 48px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-text-primary);
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  color: var(--p-primary-color);
   text-decoration: none;
+  font-size: 1.25rem;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
-.theme-toggle:hover,
-.profile-link:hover,
-.settings-link:hover {
+.logo-link:hover {
   background-color: var(--p-surface-hover);
 }
 
-/* Desktop header add button — hidden on mobile */
-.header-add-btn {
+.app-title {
   display: none;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-right: var(--space-1);
+  white-space: nowrap;
+}
+
+/* Inline nav links (desktop only) */
+.inline-nav {
+  display: none;
+  align-self: stretch;
   align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  padding: 0 var(--space-2);
-  background-color: var(--p-primary-hover-color);
-  color: var(--p-primary-contrast-color);
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.header-add-btn:hover {
-  background-color: var(--p-primary-active-color);
-}
-
-/* Top nav — hidden on mobile, shown on desktop */
-.top-nav {
-  display: none;
-}
-
-.top-nav-link {
+.nav-link {
   display: flex;
   align-items: center;
+  align-self: stretch;
   padding: 0 var(--space-2);
-  min-height: 48px;
   text-decoration: none;
   color: var(--color-text-secondary);
   font-weight: 500;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
 }
 
-.top-nav-link.active {
+.nav-link.active {
   color: var(--color-text-primary);
   border-bottom-color: var(--p-primary-color);
+}
+
+.nav-link:hover:not(.active) {
+  color: var(--color-text-primary);
+}
+
+/* Icon buttons in circles */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px; /* override global button min-height: 48px so circles stay square */
+  background-color: var(--p-surface-ground);
+  border: 1px solid var(--p-surface-border);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background-color: var(--p-surface-hover);
+}
+
+/* Profile pill */
+.profile-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  min-height: 36px; /* override global a { min-height: 48px } */
+  padding: 0 2px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--color-text-primary);
+  background-color: var(--p-surface-ground);
+}
+
+.profile-pill:hover {
+  background-color: var(--p-surface-hover);
+}
+
+.household-name {
+  display: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Main content */
@@ -217,6 +247,8 @@ const headerButtonLabel = computed(() => {
 /* Bottom nav — visible on mobile */
 .bottom-nav {
   display: flex;
+  margin: 0;
+  padding: 0;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -254,21 +286,25 @@ const headerButtonLabel = computed(() => {
 
 /* Desktop layout */
 @media (min-width: 1024px) {
-  .top-nav {
+  .app-title {
+    display: block;
+  }
+
+  .inline-nav {
     display: flex;
-    justify-content: center;
-    gap: var(--space-2);
-    background-color: var(--p-surface-card);
-    border-bottom: 1px solid var(--p-surface-border);
-    padding: 0 var(--space-4);
+  }
+
+  .household-name {
+    display: block;
+  }
+
+  .profile-pill {
+    padding: 0 10px 0 2px;
+    border: 1px solid var(--p-surface-border);
   }
 
   .bottom-nav {
     display: none;
-  }
-
-  .header-add-btn {
-    display: flex;
   }
 
   .app-content {
