@@ -65,11 +65,11 @@ export async function mockMembersApi(page: Page, respondWithMember: boolean) {
   })
 }
 
-// Catch-all for any remaining PocketBase calls (prevents unhandled network errors in console)
+// Catch-all: abort any PocketBase request not explicitly mocked above.
+// Aborting (rather than fulfilling with {}) makes mock gaps fail loudly in both
+// CI and local dev, preventing silent fallthrough to a real running PocketBase.
 export async function mockRemainingPbCalls(page: Page) {
-  await page.route(`${PB_URL}/**`, (route) => {
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-  })
+  await page.route(`${PB_URL}/**`, (route) => route.abort())
 }
 
 // ─── Epic 2 helpers ──────────────────────────────────────────────────────────
