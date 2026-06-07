@@ -121,6 +121,7 @@ describe('AuthView', () => {
       mountView()
       await flushPromises()
 
+      expect(mockOnOAuth2Success).toHaveBeenCalledOnce()
       expect(mockRouterReplace).toHaveBeenCalledWith('/finances')
       expect(mockSend).not.toHaveBeenCalled()
     })
