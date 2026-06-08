@@ -102,6 +102,35 @@ export async function mockExpensesApi(page: Page, expenses: MockExpense[] = []) 
   )
 }
 
+// Mock POST /api/collections/expenses/records (create expense).
+// Handles both GET (expense list, pass-through to next handler) and POST (create response).
+// options.failWithStatus: if set, POST returns that HTTP error status.
+export async function mockExpensesCreateApi(
+  page: Page,
+  createdExpense: MockExpense,
+  options: { failWithStatus?: number } = {},
+) {
+  await page.route(`${PB_URL}/api/collections/expenses/records*`, (route) => {
+    if (route.request().method() === 'POST') {
+      if (options.failWithStatus) {
+        route.fulfill({
+          status: options.failWithStatus,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: options.failWithStatus, message: 'Server error', data: {} }),
+        })
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(createdExpense),
+        })
+      }
+    } else {
+      route.continue()
+    }
+  })
+}
+
 // ─── Epic 2 helpers ──────────────────────────────────────────────────────────
 
 export const MOCK_MEMBER_ID_2 = 'smoke-member-id-2'
