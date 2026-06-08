@@ -67,8 +67,8 @@ test('submitting a valid expense adds it to the expense list', async ({ page }) 
     await page.getByRole('button', { name: 'Add expense' }).click()
     await page.getByLabel('Title').fill('Test Groceries')
     const amountInput = page.locator('#expense-amount')
-    await amountInput.click()
-    await amountInput.pressSequentially('50')
+    await amountInput.fill('50')
+    await amountInput.blur()
     await page.getByRole('button', { name: 'Confirm' }).click()
   })
 
@@ -124,8 +124,7 @@ test('amount of 0 shows validation error and blocks submit', async ({ page }) =>
   await test.step('enter title, set amount to 0, then blur', async () => {
     await page.getByLabel('Title').fill('Test')
     const amountInput = page.locator('#expense-amount')
-    await amountInput.click()
-    await amountInput.pressSequentially('0')
+    await amountInput.fill('0')
     await amountInput.blur()
   })
 
@@ -152,8 +151,8 @@ test('failed POST reverts optimistic expense and shows error banner', async ({ p
     await page.getByRole('button', { name: 'Add expense' }).click()
     await page.getByLabel('Title').fill('Will Fail')
     const amountInput = page.locator('#expense-amount')
-    await amountInput.click()
-    await amountInput.pressSequentially('30')
+    await amountInput.fill('30')
+    await amountInput.blur()
     await page.getByRole('button', { name: 'Confirm' }).click()
   })
 
