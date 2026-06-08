@@ -6,6 +6,9 @@ import InputNumber from 'primevue/inputnumber'
 import DatePicker from 'primevue/datepicker'
 import type { NewExpensePayload } from '@/modules/finances/types'
 import { getCurrencyLocale } from '@/shared/lib/currencyHelpers'
+import { getLocaleDateFormat } from '@/shared/lib/dateHelpers'
+
+const localeDateFormat = getLocaleDateFormat(navigator.language)
 
 const props = defineProps<{
   currency: string
@@ -108,7 +111,7 @@ watch(open, (isOpen) => {
     <div v-if="showMoreOptions" class="more-options">
       <div class="field">
         <label for="expense-date">Date</label>
-        <DatePicker id="expense-date" v-model="date" date-format="yy-mm-dd" />
+        <DatePicker id="expense-date" v-model="date" :date-format="localeDateFormat" />
       </div>
 
       <div class="field">
