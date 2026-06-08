@@ -39,7 +39,7 @@ export async function mockMembersApi(page: Page, respondWithMember: boolean) {
         contentType: 'application/json',
         body: JSON.stringify({
           page: 1,
-          perPage: 1,
+          perPage: 1000,
           totalItems: 1,
           totalPages: 1,
           items: [
@@ -70,6 +70,36 @@ export async function mockMembersApi(page: Page, respondWithMember: boolean) {
 // CI and local dev, preventing silent fallthrough to a real running PocketBase.
 export async function mockRemainingPbCalls(page: Page) {
   await page.route(`${PB_URL}/**`, (route) => route.abort())
+}
+
+// ─── Epic 3 helpers ──────────────────────────────────────────────────────────
+
+export interface MockExpense {
+  id: string
+  household_id: string
+  member_id: string
+  title: string
+  amount: number   // integer cents
+  portion: number  // integer percentage
+  date: string
+  created: string
+  updated: string
+}
+
+export async function mockExpensesApi(page: Page, expenses: MockExpense[] = []) {
+  await page.route(`${PB_URL}/api/collections/expenses/records*`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        page: 1,
+        perPage: 30,
+        totalItems: expenses.length,
+        totalPages: expenses.length === 0 ? 0 : 1,
+        items: expenses,
+      }),
+    }),
+  )
 }
 
 // ─── Epic 2 helpers ──────────────────────────────────────────────────────────
