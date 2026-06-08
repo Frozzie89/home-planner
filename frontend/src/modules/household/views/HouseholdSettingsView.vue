@@ -13,6 +13,7 @@ import { useAuthStore } from '@/shared/stores/auth'
 import { useHouseholdStore } from '@/modules/household/stores/household'
 import type { Household } from '@/shared/types'
 import type { MemberRecord } from '@/modules/household/types'
+import { getMemberName } from '@/shared/lib/memberHelpers'
 import MemberList from '@/modules/household/components/MemberList.vue'
 import UserAvatar from '@/shared/components/UserAvatar.vue'
 import BottomSheet from '@/shared/components/BottomSheet.vue'
@@ -119,10 +120,6 @@ function validateName() {
   nameError.value = formData.value.name.trim() === '' ? 'Household name is required' : ''
 }
 
-function getMemberName(member: MemberRecord): string {
-  const u = member.expand?.user_id
-  return member.display_name?.trim() || u?.name || u?.username || u?.email || 'Unknown member'
-}
 
 
 async function loadSettings() {

@@ -96,14 +96,17 @@ async function handleSubmit() {
       reminder_day: 'Monday',
     })
 
-    const member = await pb.collection('members').create({
-      household_id: household.id,
-      user_id: authStore.userId,
-      role: 'admin',
+    const setupResult = await pb.send<{ memberId: string }>('/api/household/complete-setup', {
+      method: 'POST',
+      body: { household_id: household.id },
     })
 
+    if (!setupResult?.memberId) {
+      throw new Error('Setup hook returned no memberId')
+    }
+
     await pb.collection('households').update(household.id, {
-      split_ratios: { [member.id]: 100 },
+      split_ratios: { [setupResult.memberId]: 100 },
     })
 
     authStore.householdId = household.id
@@ -113,7 +116,7 @@ async function handleSubmit() {
       id: household.id,
       name: household.name,
       currency: household.currency,
-      split_ratios: { [member.id]: 100 },
+      split_ratios: { [setupResult.memberId]: 100 },
       reminder_day: household.reminder_day,
     })
 

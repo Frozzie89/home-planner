@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { MemberRecord } from '@/modules/household/types'
 import UserAvatar from '@/shared/components/UserAvatar.vue'
+import { getMemberName } from '@/shared/lib/memberHelpers'
 
 const props = defineProps<{
   members: MemberRecord[]
@@ -14,10 +15,6 @@ const emit = defineEmits<{
   demote: [member: MemberRecord]
 }>()
 
-function getMemberName(member: MemberRecord): string {
-  const u = member.expand?.user_id
-  return member.display_name?.trim() || u?.name || u?.username || u?.email || 'Unknown member'
-}
 
 const sortedMembers = computed(() =>
   [...props.members].sort((a, b) =>

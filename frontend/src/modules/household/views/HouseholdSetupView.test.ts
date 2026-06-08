@@ -11,9 +11,9 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockHouseholdsCreate, mockMembersCreate, mockHouseholdsUpdate, mockRouterPush } = vi.hoisted(() => ({
+const { mockHouseholdsCreate, mockSend, mockHouseholdsUpdate, mockRouterPush } = vi.hoisted(() => ({
   mockHouseholdsCreate: vi.fn(),
-  mockMembersCreate: vi.fn(),
+  mockSend: vi.fn(),
   mockHouseholdsUpdate: vi.fn(),
   mockRouterPush: vi.fn(),
 }))
@@ -21,9 +21,10 @@ const { mockHouseholdsCreate, mockMembersCreate, mockHouseholdsUpdate, mockRoute
 vi.mock('@/shared/lib/pocketbase', () => ({
   pb: {
     collection: (name: string) => {
-      if (name === 'members') return { create: mockMembersCreate }
-      return { create: mockHouseholdsCreate, update: mockHouseholdsUpdate }
+      if (name === 'households') return { create: mockHouseholdsCreate, update: mockHouseholdsUpdate }
+      return { create: vi.fn(), update: vi.fn() }
     },
+    send: mockSend,
   },
 }))
 
@@ -154,12 +155,7 @@ describe('HouseholdSetupView', () => {
         split_ratios: {},
         reminder_day: 'Monday',
       })
-      mockMembersCreate.mockResolvedValueOnce({
-        id: 'member-1',
-        household_id: 'hh-1',
-        user_id: 'user-123',
-        role: 'admin',
-      })
+      mockSend.mockResolvedValueOnce({ memberId: 'member-1' })
       mockHouseholdsUpdate.mockResolvedValueOnce({})
       mockRouterPush.mockResolvedValueOnce(undefined)
     })
@@ -178,16 +174,15 @@ describe('HouseholdSetupView', () => {
       }))
     })
 
-    it('calls pb.collection("members").create after household is created', async () => {
+    it('calls pb.send("/api/household/complete-setup") after household is created', async () => {
       const wrapper = mountView()
       await wrapper.find('#household-name').setValue('The Smiths')
       await wrapper.find('button').trigger('click')
-      await vi.waitFor(() => expect(mockMembersCreate).toHaveBeenCalled())
+      await vi.waitFor(() => expect(mockSend).toHaveBeenCalled())
 
-      expect(mockMembersCreate).toHaveBeenCalledWith(expect.objectContaining({
-        household_id: 'hh-1',
-        user_id: 'user-123',
-        role: 'admin',
+      expect(mockSend).toHaveBeenCalledWith('/api/household/complete-setup', expect.objectContaining({
+        method: 'POST',
+        body: { household_id: 'hh-1' },
       }))
     })
 
@@ -260,7 +255,7 @@ describe('HouseholdSetupView', () => {
       expect(mockRouterPush).not.toHaveBeenCalled()
     })
 
-    it('shows error and does not navigate when members.create throws', async () => {
+    it('shows error and does not navigate when pb.send throws', async () => {
       mockHouseholdsCreate.mockResolvedValueOnce({
         id: 'hh-1',
         name: 'The Smiths',
@@ -268,7 +263,7 @@ describe('HouseholdSetupView', () => {
         split_ratios: {},
         reminder_day: 'Monday',
       })
-      mockMembersCreate.mockRejectedValueOnce(new Error('Members create failed'))
+      mockSend.mockRejectedValueOnce(new Error('Setup hook failed'))
 
       const wrapper = mountView()
       await wrapper.find('#household-name').setValue('The Smiths')
@@ -288,12 +283,7 @@ describe('HouseholdSetupView', () => {
         split_ratios: {},
         reminder_day: 'Monday',
       })
-      mockMembersCreate.mockResolvedValueOnce({
-        id: 'member-1',
-        household_id: 'hh-1',
-        user_id: 'user-123',
-        role: 'admin',
-      })
+      mockSend.mockResolvedValueOnce({ memberId: 'member-1' })
       mockHouseholdsUpdate.mockRejectedValueOnce(new Error('Update failed'))
 
       const wrapper = mountView()
