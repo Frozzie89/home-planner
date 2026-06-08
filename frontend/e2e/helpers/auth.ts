@@ -39,7 +39,7 @@ export async function mockMembersApi(page: Page, respondWithMember: boolean) {
         contentType: 'application/json',
         body: JSON.stringify({
           page: 1,
-          perPage: 1,
+          perPage: 1000,
           totalItems: 1,
           totalPages: 1,
           items: [
