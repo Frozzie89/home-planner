@@ -60,7 +60,7 @@ const amountParts = computed(() => {
     }
   }
 
-  const sign = isPositive.value ? '+' : isNegative.value ? '-' : '' // − U+2212
+  const sign = isPositive.value ? '+' : isNegative.value ? '−' : '' // U+2212 minus sign
   return { sign, prefix, intPart, frac, suffix }
 })
 

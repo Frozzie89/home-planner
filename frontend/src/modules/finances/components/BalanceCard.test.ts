@@ -48,8 +48,7 @@ describe('BalanceCard', () => {
 
     const amountEl = wrapper.find('.balance-amount')
     expect(amountEl.classes()).toContain('state-negative')
-    // U+2212 minus sign
-    expect(amountEl.text()).toMatch(/^−/)
+    expect(amountEl.text()).toMatch(/^−/) // U+2212 minus sign
     expect(wrapper.text()).toContain('45')
   })
 
