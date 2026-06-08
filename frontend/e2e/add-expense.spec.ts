@@ -73,8 +73,8 @@ test('submitting a valid expense adds it to the expense list', async ({ page }) 
   })
 
   await test.step('verify expense appears and optimistic entry is replaced', async () => {
-    await expect(page.getByText('Test Groceries')).toBeVisible()
     await expect(page.locator('.expense-item--new')).toHaveCount(0)
+    await expect(page.getByText('Test Groceries')).toBeVisible()
   })
 })
 
