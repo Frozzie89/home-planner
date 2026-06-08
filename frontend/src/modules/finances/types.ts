@@ -20,3 +20,10 @@ export interface SettleUpPayload {
   member_a_id: string
   member_b_id: string
 }
+
+export interface NewExpensePayload {
+  title: string
+  amount: number   // integer cents, e.g. 4580 = €45.80
+  date: string     // ISO date string, e.g. "2026-06-08 00:00:00.000Z"
+  portion: number  // integer percentage of viewer's share, e.g. 50 = 50%
+}

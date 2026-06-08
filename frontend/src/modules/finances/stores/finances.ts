@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { pb } from '@/shared/lib/pocketbase'
 import { useAuthStore } from '@/shared/stores/auth'
 import { useHouseholdStore } from '@/modules/household/stores/household'
-import type { Expense, Balance } from '@/modules/finances/types'
+import type { Expense, Balance, NewExpensePayload } from '@/modules/finances/types'
 import type { MemberRecord } from '@/modules/household/types'
 
 export const useFinancesStore = defineStore('finances', () => {
@@ -11,6 +11,7 @@ export const useFinancesStore = defineStore('finances', () => {
   const expenses = ref<Expense[]>([])
   const members = ref<MemberRecord[]>([])
   const loadStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+  const addExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
   watch(() => authStore.isAuthenticated, (isAuth) => {
     if (!isAuth) reset()
@@ -94,11 +95,60 @@ export const useFinancesStore = defineStore('finances', () => {
     members.value = result
   }
 
+  async function addExpense(payload: NewExpensePayload) {
+    if (!authStore.householdId || !authStore.memberId) return
+    if (loadStatus.value !== 'success') return
+    if (addExpenseStatus.value === 'loading') return
+
+    addExpenseStatus.value = 'loading'
+    const optimisticId = `optimistic-${Date.now()}`
+
+    const optimisticExpense: Expense = {
+      id: optimisticId,
+      household_id: authStore.householdId,
+      member_id: authStore.memberId,
+      title: payload.title,
+      amount: payload.amount,
+      portion: payload.portion,
+      date: payload.date,
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+    }
+
+    const snapshot = [...expenses.value]
+    expenses.value = [optimisticExpense, ...expenses.value]
+
+    try {
+      const created = await pb.collection('expenses').create<Expense>({
+        household_id: authStore.householdId,
+        member_id: authStore.memberId,
+        title: payload.title,
+        amount: payload.amount,
+        portion: payload.portion,
+        date: payload.date,
+      })
+      const idx = expenses.value.findIndex(e => e.id === optimisticId)
+      if (idx >= 0) {
+        expenses.value = [
+          ...expenses.value.slice(0, idx),
+          created,
+          ...expenses.value.slice(idx + 1),
+        ]
+      }
+      addExpenseStatus.value = 'success'
+    } catch {
+      if (!authStore.isAuthenticated) return
+      expenses.value = snapshot
+      addExpenseStatus.value = 'error'
+    }
+  }
+
   function reset() {
     expenses.value = []
     members.value = []
     loadStatus.value = 'idle'
+    addExpenseStatus.value = 'idle'
   }
 
-  return { expenses, members, loadStatus, bilateralBalances, load, reset }
+  return { expenses, members, loadStatus, bilateralBalances, load, reset, addExpenseStatus, addExpense }
 })
