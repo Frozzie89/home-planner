@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
+import { pb } from '@/shared/lib/pocketbase'
 
 const {
   mockAuthWithOAuth2Code,
@@ -9,6 +10,7 @@ const {
   mockRouterReplace,
   mockLogout,
   mockOnOAuth2Success,
+  mockDelete,
 } = vi.hoisted(() => ({
   mockAuthWithOAuth2Code: vi.fn(),
   mockSend: vi.fn(),
@@ -16,14 +18,16 @@ const {
   mockRouterReplace: vi.fn(),
   mockLogout: vi.fn(),
   mockOnOAuth2Success: vi.fn(),
+  mockDelete: vi.fn(),
 }))
 
 vi.mock('@/shared/lib/pocketbase', () => ({
   pb: {
-    authStore: { isValid: false, record: null, clear: vi.fn() },
+    authStore: { isValid: false, record: null as null | { id: string }, clear: vi.fn() },
     collection: vi.fn(() => ({
       authWithOAuth2Code: mockAuthWithOAuth2Code,
       listAuthMethods: mockListAuthMethods,
+      delete: mockDelete,
     })),
     send: mockSend,
     filter: vi.fn((expr: string) => expr),
@@ -79,7 +83,8 @@ describe('AuthView', () => {
     vi.clearAllMocks()
     mockAuthStore.householdId = null
     mockOnOAuth2Success.mockResolvedValue(undefined)
-    mockListAuthMethods.mockResolvedValue({ oauth2: { providers: [] } })
+    mockListAuthMethods.mockResolvedValue({ oauth2: { providers: [] } });
+    (pb as any).authStore.record = null
     sessionStorage.clear()
     localStorage.clear()
     setLocation('')
@@ -95,8 +100,30 @@ describe('AuthView', () => {
       mockAuthWithOAuth2Code.mockResolvedValue({})
     })
 
-    it('path 3: household exists, user not a member -> logout + redirect + show message + load providers', async () => {
+    it('path 3: household exists, user not a member -> deletes user record, logout, redirect, show message', async () => {
       mockSend.mockResolvedValue({ exists: true })
+      mockDelete.mockResolvedValue(undefined);
+      (pb as any).authStore.record = { id: 'orphan-user-id' }
+
+      const wrapper = mountView()
+      await flushPromises()
+
+      expect(mockDelete).toHaveBeenCalledWith('orphan-user-id')
+      // delete must happen before logout (token still valid at that point)
+      const deleteOrder = mockDelete.mock.invocationCallOrder[0]!
+      const logoutOrder = mockLogout.mock.invocationCallOrder[0]!
+      expect(deleteOrder).toBeLessThan(logoutOrder)
+      expect(mockLogout).toHaveBeenCalledOnce()
+      expect(mockRouterReplace).toHaveBeenCalledWith('/auth?error=not_registered')
+      expect(wrapper.find('.auth-not-registered').exists()).toBe(true)
+      expect(wrapper.text()).toContain("This account isn't linked to this household")
+      expect(mockListAuthMethods).toHaveBeenCalled()
+    })
+
+    it('path 3: user record delete fails -> still logs out and redirects', async () => {
+      mockSend.mockResolvedValue({ exists: true })
+      mockDelete.mockRejectedValue(new Error('403 Forbidden'));
+      (pb as any).authStore.record = { id: 'orphan-user-id' }
 
       const wrapper = mountView()
       await flushPromises()
@@ -104,8 +131,18 @@ describe('AuthView', () => {
       expect(mockLogout).toHaveBeenCalledOnce()
       expect(mockRouterReplace).toHaveBeenCalledWith('/auth?error=not_registered')
       expect(wrapper.find('.auth-not-registered').exists()).toBe(true)
-      expect(wrapper.text()).toContain("This account isn't linked to this household")
-      expect(mockListAuthMethods).toHaveBeenCalled()
+    })
+
+    it('path 3: no authStore record -> skips delete, still logs out and redirects', async () => {
+      mockSend.mockResolvedValue({ exists: true })
+      // pb.authStore.record remains null (set in outer beforeEach)
+
+      mountView()
+      await flushPromises()
+
+      expect(mockDelete).not.toHaveBeenCalled()
+      expect(mockLogout).toHaveBeenCalledOnce()
+      expect(mockRouterReplace).toHaveBeenCalledWith('/auth?error=not_registered')
     })
 
     it('path 1: no household exists -> redirect to /setup, no logout', async () => {

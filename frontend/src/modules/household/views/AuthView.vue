@@ -153,7 +153,17 @@ async function handleCallback(code: string, state: string) {
     // householdId is null: distinguish path 1 (no household) from path 3 (household exists, not a member)
     const existsResponse = await pb.send<{ exists: boolean }>('/api/household/exists', { method: 'GET' })
     if (existsResponse.exists) {
-      // Path 3: household exists but this user has no membership -> reject at auth layer
+      // Path 3: household exists but this user has no membership -> reject at auth layer.
+      // Delete the orphaned user record before clearing the session — the token is still
+      // valid here and the default deleteRule allows self-delete.
+      const orphanId = pb.authStore.record?.id
+      if (orphanId) {
+        try {
+          await pb.collection('users').delete(orphanId)
+        } catch {
+          // best-effort — proceed with logout regardless
+        }
+      }
       authStore.logout()
       router.replace('/auth?error=not_registered')
       // router.replace won't re-trigger onMounted — we're already on /auth, so set state directly
