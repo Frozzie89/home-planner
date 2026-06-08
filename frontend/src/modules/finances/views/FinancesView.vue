@@ -284,7 +284,7 @@ const groupedExpenses = computed(() => {
 }
 
 .btn-add-desktop {
-  background-color: var(--p-primary-color);
+  background-color: var(--p-primary-active-color);
   color: white;
   border: none;
   border-radius: 8px;

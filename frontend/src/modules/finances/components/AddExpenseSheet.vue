@@ -175,7 +175,7 @@ watch(open, (isOpen) => {
   background: none;
   border: none;
   padding: 0;
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   font-size: 0.875rem;
   cursor: pointer;
   font-family: inherit;
