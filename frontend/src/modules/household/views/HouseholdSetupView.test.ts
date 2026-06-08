@@ -32,6 +32,7 @@ const mockAuthStore = {
   userId: 'user-123',
   householdId: null as string | null,
   role: null as string | null,
+  memberId: null as string | null,
   isAuthenticated: true,
 }
 
@@ -94,6 +95,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockAuthStore.householdId = null
   mockAuthStore.role = null
+  mockAuthStore.memberId = null
 })
 
 describe('HouseholdSetupView', () => {
@@ -197,7 +199,7 @@ describe('HouseholdSetupView', () => {
       })
     })
 
-    it('updates authStore.householdId and authStore.role after success', async () => {
+    it('updates authStore.householdId, authStore.role, and authStore.memberId after success', async () => {
       const wrapper = mountView()
       await wrapper.find('#household-name').setValue('The Smiths')
       await wrapper.find('button').trigger('click')
@@ -205,6 +207,7 @@ describe('HouseholdSetupView', () => {
 
       expect(mockAuthStore.householdId).toBe('hh-1')
       expect(mockAuthStore.role).toBe('admin')
+      expect(mockAuthStore.memberId).toBe('member-1')
     })
 
     it('calls householdStore.populate with correct data after success', async () => {
