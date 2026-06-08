@@ -165,6 +165,7 @@ async function save() {
             class="avatar-btn"
             :disabled="avatarUploadStatus === 'loading'"
             aria-label="Change profile picture"
+            @click="fileInputRef?.click()"
           >
             <UserAvatar :size="72" />
             <span class="avatar-overlay" :class="{ 'is-loading': avatarUploadStatus === 'loading' }" aria-hidden="true">
