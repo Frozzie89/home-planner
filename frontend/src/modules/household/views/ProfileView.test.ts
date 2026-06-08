@@ -11,7 +11,7 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-const { mockGetOne, mockUpdate, mockToastAdd, mockLogout, mockRouterPush, mockAuthSave, mockSend, mockLoadMembership } = vi.hoisted(() => ({
+const { mockGetOne, mockUpdate, mockToastAdd, mockLogout, mockRouterPush, mockAuthSave, mockSend } = vi.hoisted(() => ({
   mockGetOne: vi.fn(),
   mockUpdate: vi.fn(),
   mockToastAdd: vi.fn(),
@@ -19,7 +19,6 @@ const { mockGetOne, mockUpdate, mockToastAdd, mockLogout, mockRouterPush, mockAu
   mockRouterPush: vi.fn(),
   mockAuthSave: vi.fn(),
   mockSend: vi.fn(),
-  mockLoadMembership: vi.fn(),
 }))
 
 vi.mock('@/shared/lib/pocketbase', () => ({
@@ -43,7 +42,6 @@ const mockAuthStoreState = {
   userId: 'user-test',
   isAuthenticated: true,
   logout: mockLogout,
-  loadMembership: mockLoadMembership,
 }
 
 vi.mock('@/shared/stores/auth', () => ({
@@ -285,7 +283,6 @@ describe('ProfileView', () => {
 
       expect(mockSend).toHaveBeenCalledWith('/api/household/leave', { method: 'POST' })
       expect(mockLogout).toHaveBeenCalledOnce()
-      expect(mockLoadMembership).not.toHaveBeenCalled()
       expect(mockRouterPush).toHaveBeenCalledWith('/auth')
     })
 

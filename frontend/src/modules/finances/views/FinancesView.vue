@@ -44,6 +44,9 @@ const isSinglePair = computed(() => financesStore.bilateralBalances.length === 1
           :header-label="isSinglePair ? 'YOUR BALANCE' : undefined"
         />
       </template>
+      <template v-if="financesStore.bilateralBalances.length === 0">
+        <p class="empty-state">Add another member to see balances here.</p>
+      </template>
     </template>
 
     <!-- Expense list area (full implementation in Story 3.3) -->

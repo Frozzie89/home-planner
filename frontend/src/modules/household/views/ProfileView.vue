@@ -69,21 +69,14 @@ function handleLogout() {
 async function handleLeaveConfirm() {
   if (leaveStatus.value === 'loading') return
   leaveStatus.value = 'loading'
-  let leaveSucceeded = false
   try {
     await pb.send('/api/household/leave', { method: 'POST' })
-    leaveSucceeded = true
     showLeaveSheet.value = false
     authStore.logout()
     router.push('/auth')
   } catch {
-    if (leaveSucceeded) {
-      authStore.logout()
-      router.push('/auth')
-    } else {
-      toast.add({ severity: 'error', summary: "Couldn't leave — try again", life: 5000 })
-      leaveStatus.value = 'error'
-    }
+    toast.add({ severity: 'error', summary: "Couldn't leave — try again", life: 5000 })
+    leaveStatus.value = 'error'
   }
 }
 
