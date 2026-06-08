@@ -145,7 +145,7 @@ const groupedExpenses = computed(() => {
   <div class="finances-page">
     <!-- Desktop: page header with + Add expense button -->
     <div class="page-header">
-      <h2 class="page-title">Finances</h2>
+      <p class="page-title">Finances</p>
       <button
         type="button"
         class="btn-add-desktop"

@@ -23,9 +23,9 @@ vi.mock('primevue/inputtext', () => ({
 vi.mock('primevue/inputnumber', () => ({
   default: {
     name: 'InputNumber',
-    props: ['modelValue', 'mode', 'currency', 'locale', 'min', 'max', 'maxFractionDigits', 'minFractionDigits', 'suffix'],
+    props: ['modelValue', 'inputId', 'mode', 'currency', 'locale', 'min', 'max', 'maxFractionDigits', 'minFractionDigits', 'suffix'],
     emits: ['update:modelValue', 'blur'],
-    template: '<input :value="modelValue ?? \'\'" @input="$emit(\'update:modelValue\', Number($event.target.value) || null)" @blur="$emit(\'blur\')" />',
+    template: '<input :id="inputId" :value="modelValue ?? \'\'" @input="$emit(\'update:modelValue\', Number($event.target.value) || null)" @blur="$emit(\'blur\')" />',
   },
 }))
 
