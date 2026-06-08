@@ -110,8 +110,8 @@ describe('AuthView', () => {
 
       expect(mockDelete).toHaveBeenCalledWith('orphan-user-id')
       // delete must happen before logout (token still valid at that point)
-      const deleteOrder = mockDelete.mock.invocationCallOrder[0]
-      const logoutOrder = mockLogout.mock.invocationCallOrder[0]
+      const deleteOrder = mockDelete.mock.invocationCallOrder[0]!
+      const logoutOrder = mockLogout.mock.invocationCallOrder[0]!
       expect(deleteOrder).toBeLessThan(logoutOrder)
       expect(mockLogout).toHaveBeenCalledOnce()
       expect(mockRouterReplace).toHaveBeenCalledWith('/auth?error=not_registered')
