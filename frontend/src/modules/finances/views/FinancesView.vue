@@ -434,8 +434,8 @@ const groupedExpenses = computed(() => {
 }
 
 .expense-title {
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -443,7 +443,7 @@ const groupedExpenses = computed(() => {
 }
 
 .expense-meta {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--color-text-secondary);
 }
 
@@ -458,13 +458,13 @@ const groupedExpenses = computed(() => {
 }
 
 .expense-amount {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--color-text-primary);
 }
 
 .expense-share {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
