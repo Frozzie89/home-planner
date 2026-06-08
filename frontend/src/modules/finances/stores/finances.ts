@@ -23,31 +23,29 @@ export const useFinancesStore = defineStore('finances', () => {
     const splitRatios = householdStore.split_ratios
     const otherMembers = members.value.filter(m => m.id !== viewerMemberId)
 
+    // Hoist viewer-side invariants outside the per-expense loop
+    const otherNonViewerIds = otherMembers.map(m => m.id)
+    const totalOtherRatio = otherNonViewerIds.reduce((sum, id) => sum + (splitRatios[id] ?? 0), 0)
+    const viewerRatio = splitRatios[viewerMemberId] ?? 0
+
     return otherMembers.map(other => {
       let balance = 0 // integer cents; positive = viewer is owed
+
+      // Hoist other-side invariant per bilateral pair
+      const otherNonOtherIds = members.value.filter(m => m.id !== other.id).map(m => m.id)
+      const totalViewerSideRatio = otherNonOtherIds.reduce((sum, id) => sum + (splitRatios[id] ?? 0), 0)
+      const otherRatio = splitRatios[other.id] ?? 0
 
       for (const expense of expenses.value) {
         if (expense.member_id === viewerMemberId) {
           // Viewer paid — compute this other member's share of the non-viewer portion
           const remainder = Math.trunc(expense.amount * (100 - expense.portion) / 100)
-          const otherNonViewerIds = members.value
-            .filter(m => m.id !== viewerMemberId)
-            .map(m => m.id)
-          const totalOtherRatio = otherNonViewerIds
-            .reduce((sum, id) => sum + (splitRatios[id] ?? 0), 0)
-          const otherRatio = splitRatios[other.id] ?? 0
           if (totalOtherRatio > 0) {
             balance += Math.round(remainder * otherRatio / totalOtherRatio)
           }
         } else if (expense.member_id === other.id) {
           // Other paid — compute viewer's share of the non-other portion
           const remainder = Math.trunc(expense.amount * (100 - expense.portion) / 100)
-          const otherNonOtherIds = members.value
-            .filter(m => m.id !== other.id)
-            .map(m => m.id)
-          const totalViewerSideRatio = otherNonOtherIds
-            .reduce((sum, id) => sum + (splitRatios[id] ?? 0), 0)
-          const viewerRatio = splitRatios[viewerMemberId] ?? 0
           if (totalViewerSideRatio > 0) {
             balance -= Math.round(remainder * viewerRatio / totalViewerSideRatio)
           }
@@ -61,28 +59,33 @@ export const useFinancesStore = defineStore('finances', () => {
 
   async function load() {
     if (loadStatus.value === 'loading') return
+    const authStore = useAuthStore()
+    if (!authStore.householdId) {
+      loadStatus.value = 'error'
+      return
+    }
     loadStatus.value = 'loading'
     try {
       await Promise.all([loadExpenses(), loadMembers()])
       loadStatus.value = 'success'
     } catch {
+      // Clear partial data so bilateralBalances never operates on a mismatched set
+      expenses.value = []
+      members.value = []
       loadStatus.value = 'error'
     }
   }
 
   async function loadExpenses() {
-    const authStore = useAuthStore()
+    // The listRule enforces household isolation server-side; no redundant client filter needed.
     const result = await pb.collection('expenses').getFullList<Expense>({
-      filter: pb.filter('household_id = {:hid}', { hid: authStore.householdId! }),
-      sort: '-date,-created',
+      sort: '-date',
     })
     expenses.value = result
   }
 
   async function loadMembers() {
-    const authStore = useAuthStore()
     const result = await pb.collection('members').getFullList<MemberRecord>({
-      filter: pb.filter('household_id = {:hid}', { hid: authStore.householdId! }),
       expand: 'user_id',
     })
     members.value = result

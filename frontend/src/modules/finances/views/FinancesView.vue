@@ -14,9 +14,11 @@ onMounted(() => {
   financesStore.load()
 })
 
-function getMemberById(memberId: string) {
-  return financesStore.members.find(m => m.id === memberId)
-}
+const memberMap = computed(() => {
+  const map = new Map<string, (typeof financesStore.members)[number]>()
+  for (const m of financesStore.members) map.set(m.id, m)
+  return map
+})
 
 // Single pair -> "YOUR BALANCE"; multiple pairs -> "WITH [NAME]" (computed in BalanceCard)
 const isSinglePair = computed(() => financesStore.bilateralBalances.length === 1)
@@ -25,15 +27,18 @@ const isSinglePair = computed(() => financesStore.bilateralBalances.length === 1
 <template>
   <div class="finances-page">
     <!-- Balance cards or skeleton -->
-    <template v-if="financesStore.loadStatus === 'loading'">
+    <template v-if="financesStore.loadStatus === 'idle' || financesStore.loadStatus === 'loading'">
       <Skeleton height="96px" border-radius="12px" />
+    </template>
+    <template v-else-if="financesStore.loadStatus === 'error'">
+      <p class="load-error">Could not load balances. Please refresh to try again.</p>
     </template>
     <template v-else>
       <template v-for="balance in financesStore.bilateralBalances" :key="balance.member_b_id">
         <BalanceCard
-          v-if="getMemberById(balance.member_b_id)"
+          v-if="memberMap.get(balance.member_b_id)"
           :balance="balance"
-          :other-member="getMemberById(balance.member_b_id)!"
+          :other-member="memberMap.get(balance.member_b_id)!"
           :currency="householdStore.currency"
           :settled="false"
           :header-label="isSinglePair ? 'YOUR BALANCE' : undefined"
@@ -78,6 +83,13 @@ const isSinglePair = computed(() => financesStore.bilateralBalances.length === 1
   color: var(--color-text-secondary);
   text-align: center;
   padding: var(--space-4) 0;
+  margin: 0;
+}
+
+.load-error {
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: var(--space-3) 0;
   margin: 0;
 }
 

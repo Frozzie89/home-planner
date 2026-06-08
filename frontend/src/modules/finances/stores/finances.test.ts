@@ -214,7 +214,7 @@ describe('load', () => {
     expect(mockGetFullListExpenses).toHaveBeenCalledTimes(1)
   })
 
-  it('calls loadExpenses with household_id filter', async () => {
+  it('calls loadExpenses with sort but no client-side household_id filter', async () => {
     const store = useFinancesStore()
     mockGetFullListExpenses.mockResolvedValueOnce([])
     mockGetFullListMembers.mockResolvedValueOnce([])
@@ -223,13 +223,15 @@ describe('load', () => {
 
     expect(mockGetFullListExpenses).toHaveBeenCalledWith(
       expect.objectContaining({
-        filter: expect.stringContaining('hh-1'),
-        sort: '-date,-created',
+        sort: '-date',
       })
+    )
+    expect(mockGetFullListExpenses).toHaveBeenCalledWith(
+      expect.not.objectContaining({ filter: expect.anything() })
     )
   })
 
-  it('calls loadMembers with expand=user_id and household_id filter', async () => {
+  it('calls loadMembers with expand=user_id and no client-side household_id filter', async () => {
     const store = useFinancesStore()
     mockGetFullListExpenses.mockResolvedValueOnce([])
     mockGetFullListMembers.mockResolvedValueOnce([])
@@ -238,9 +240,11 @@ describe('load', () => {
 
     expect(mockGetFullListMembers).toHaveBeenCalledWith(
       expect.objectContaining({
-        filter: expect.stringContaining('hh-1'),
         expand: 'user_id',
       })
+    )
+    expect(mockGetFullListMembers).toHaveBeenCalledWith(
+      expect.not.objectContaining({ filter: expect.anything() })
     )
   })
 })
