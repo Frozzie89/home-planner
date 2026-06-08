@@ -9,12 +9,14 @@ import type { MemberRecord } from '@/modules/household/types'
 const {
   mockGetFullListExpenses,
   mockGetFullListMembers,
+  mockCreateFn,
   mockFilter,
   mockUseAuthStore,
   mockUseHouseholdStore,
 } = vi.hoisted(() => ({
   mockGetFullListExpenses: vi.fn(),
   mockGetFullListMembers: vi.fn(),
+  mockCreateFn: vi.fn(),
   mockFilter: vi.fn((expr: string, params: Record<string, unknown>) =>
     Object.entries(params).reduce((s, [k, v]) => s.replace(`{:${k}}`, String(v)), expr)
   ),
@@ -35,6 +37,7 @@ vi.mock('@/shared/lib/pocketbase', () => ({
           : name === 'members'
             ? mockGetFullListMembers
             : vi.fn(),
+      create: name === 'expenses' ? mockCreateFn : vi.fn(),
     }),
   },
 }))
@@ -273,5 +276,86 @@ describe('reset on logout', () => {
     expect(store.expenses).toHaveLength(0)
     expect(store.members).toHaveLength(0)
     expect(store.loadStatus).toBe('idle')
+  })
+})
+
+describe('addExpense', () => {
+  const payload = {
+    title: 'Groceries',
+    amount: 4580,
+    portion: 50,
+    date: '2026-06-08 00:00:00.000Z',
+  }
+
+  const serverRecord = makeExpense({
+    id: 'real-id-from-server',
+    title: 'Groceries',
+    amount: 4580,
+    portion: 50,
+    date: '2026-06-08 00:00:00.000Z',
+  })
+
+  it('immediately adds optimistic expense to front of expenses array', async () => {
+    const store = useFinancesStore()
+    const existing = makeExpense({ id: 'existing-1' })
+    store.expenses = [existing]
+
+    // Let the create hang so we can check the optimistic state
+    let resolveCreate!: (v: Expense) => void
+    mockCreateFn.mockReturnValueOnce(new Promise<Expense>(res => { resolveCreate = res }))
+
+    const addPromise = store.addExpense(payload)
+    // Optimistic entry is at index 0
+    expect(store.expenses).toHaveLength(2)
+    expect(store.expenses[0]!.id).toMatch(/^optimistic-/)
+    expect(store.expenses[0]!.title).toBe('Groceries')
+
+    resolveCreate(serverRecord)
+    await addPromise
+  })
+
+  it('sets addExpenseStatus to "loading" during write, "success" after', async () => {
+    const store = useFinancesStore()
+    mockCreateFn.mockResolvedValueOnce(serverRecord)
+
+    expect(store.addExpenseStatus).toBe('idle')
+    const addPromise = store.addExpense(payload)
+    expect(store.addExpenseStatus).toBe('loading')
+    await addPromise
+    expect(store.addExpenseStatus).toBe('success')
+  })
+
+  it('replaces optimistic entry with real record on success', async () => {
+    const store = useFinancesStore()
+    mockCreateFn.mockResolvedValueOnce(serverRecord)
+
+    await store.addExpense(payload)
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.id).toBe('real-id-from-server')
+  })
+
+  it('reverts expenses to snapshot and sets status to "error" on failure', async () => {
+    const store = useFinancesStore()
+    const existing = makeExpense({ id: 'existing-1' })
+    store.expenses = [existing]
+    mockCreateFn.mockRejectedValueOnce(new Error('Network error'))
+
+    await store.addExpense(payload)
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.id).toBe('existing-1')
+    expect(store.addExpenseStatus).toBe('error')
+  })
+
+  it('does nothing if householdId is null', async () => {
+    mockUseAuthStore.mockReturnValue({ memberId: 'member-a', householdId: null, isAuthenticated: true })
+    const store = useFinancesStore()
+    store.expenses = []
+
+    await store.addExpense(payload)
+
+    expect(mockCreateFn).not.toHaveBeenCalled()
+    expect(store.expenses).toHaveLength(0)
   })
 })
