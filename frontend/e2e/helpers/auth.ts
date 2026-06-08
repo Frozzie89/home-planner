@@ -103,7 +103,7 @@ export async function mockExpensesApi(page: Page, expenses: MockExpense[] = []) 
 }
 
 // Mock POST /api/collections/expenses/records (create expense).
-// Handles both GET (expense list, pass-through to next handler) and POST (create response).
+// GET requests fall through to mockExpensesApi via route.fallback().
 // options.failWithStatus: if set, POST returns that HTTP error status.
 export async function mockExpensesCreateApi(
   page: Page,
@@ -111,22 +111,22 @@ export async function mockExpensesCreateApi(
   options: { failWithStatus?: number } = {},
 ) {
   await page.route(`${PB_URL}/api/collections/expenses/records*`, (route) => {
-    if (route.request().method() === 'POST') {
-      if (options.failWithStatus) {
-        route.fulfill({
-          status: options.failWithStatus,
-          contentType: 'application/json',
-          body: JSON.stringify({ code: options.failWithStatus, message: 'Server error', data: {} }),
-        })
-      } else {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(createdExpense),
-        })
-      }
+    if (route.request().method() !== 'POST') {
+      route.fallback()
+      return
+    }
+    if (options.failWithStatus) {
+      route.fulfill({
+        status: options.failWithStatus,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: options.failWithStatus, message: 'Server error', data: {} }),
+      })
     } else {
-      route.continue()
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(createdExpense),
+      })
     }
   })
 }
