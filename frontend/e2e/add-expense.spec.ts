@@ -14,6 +14,7 @@ import {
 // 3.2-E1: FAB opens AddExpenseSheet
 test('FAB opens add expense sheet with title field visible', async ({ page }) => {
   await test.step('set up mocks', async () => {
+    await page.setViewportSize({ width: 390, height: 844 })
     await injectAuth(page)
     await mockRemainingPbCalls(page)
     await mockHouseholdsApi(page)
@@ -70,8 +71,9 @@ test('submitting a valid expense adds it to the expense list', async ({ page }) 
     await page.getByRole('button', { name: 'Confirm' }).click()
   })
 
-  await test.step('verify expense appears in list', async () => {
+  await test.step('verify expense appears and optimistic entry is replaced', async () => {
     await expect(page.getByText('Test Groceries')).toBeVisible()
+    await expect(page.locator('.expense-item--new')).toHaveCount(0)
   })
 })
 
@@ -102,8 +104,8 @@ test('leaving title empty shows validation error and blocks submit', async ({ pa
   })
 })
 
-// 3.2-E4: Amount empty shows validation error
-test('amount left empty shows validation error and blocks submit', async ({ page }) => {
+// 3.2-E4: Amount 0 shows validation error
+test('amount of 0 shows validation error and blocks submit', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page)
     await mockRemainingPbCalls(page)
@@ -118,10 +120,10 @@ test('amount left empty shows validation error and blocks submit', async ({ page
     await page.getByRole('button', { name: 'Add expense' }).click()
   })
 
-  await test.step('enter title but leave amount empty, then blur', async () => {
+  await test.step('enter title, set amount to 0, then blur', async () => {
     await page.getByLabel('Title').fill('Test')
     const amountInput = page.locator('#expense-amount')
-    await amountInput.focus()
+    await amountInput.fill('0')
     await amountInput.blur()
   })
 

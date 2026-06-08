@@ -97,6 +97,8 @@ export const useFinancesStore = defineStore('finances', () => {
 
   async function addExpense(payload: NewExpensePayload) {
     if (!authStore.householdId || !authStore.memberId) return
+    if (loadStatus.value !== 'success') return
+    if (addExpenseStatus.value === 'loading') return
 
     addExpenseStatus.value = 'loading'
     const optimisticId = `optimistic-${Date.now()}`
@@ -135,6 +137,7 @@ export const useFinancesStore = defineStore('finances', () => {
       }
       addExpenseStatus.value = 'success'
     } catch {
+      if (!authStore.isAuthenticated) return
       expenses.value = snapshot
       addExpenseStatus.value = 'error'
     }

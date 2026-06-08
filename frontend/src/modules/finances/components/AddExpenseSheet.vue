@@ -48,13 +48,15 @@ function handleConfirm() {
     title: title.value.trim(),
     amount: amountCents,
     date: dateStr,
-    portion: Math.round(portion.value),
+    portion: Math.min(100, Math.max(0, Math.round(portion.value))),
   })
   open.value = false
 }
 
 watch(open, (isOpen) => {
-  if (!isOpen) {
+  if (isOpen) {
+    date.value = new Date()
+  } else {
     title.value = ''
     amountRaw.value = null
     date.value = new Date()
@@ -87,7 +89,6 @@ watch(open, (isOpen) => {
         mode="currency"
         :currency="currency"
         :locale="getCurrencyLocale(currency)"
-        :min="0.01"
         :max-fraction-digits="2"
         :min-fraction-digits="2"
         @blur="amountTouched = true"
@@ -111,7 +112,7 @@ watch(open, (isOpen) => {
       </div>
 
       <div class="field">
-        <label for="expense-portion">Your share (%)</label>
+        <label for="expense-portion">Your share: {{ portion }}%</label>
         <InputNumber
           id="expense-portion"
           v-model="portion"
@@ -120,7 +121,6 @@ watch(open, (isOpen) => {
           :max-fraction-digits="0"
           suffix="%"
         />
-        <span class="field-hint">Your share: {{ portion }}%</span>
       </div>
     </div>
 
@@ -163,12 +163,6 @@ watch(open, (isOpen) => {
   color: var(--color-balance-negative);
   font-size: 0.75rem;
   margin-top: 4px;
-}
-
-.field-hint {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  margin-top: 2px;
 }
 
 .more-options-toggle {

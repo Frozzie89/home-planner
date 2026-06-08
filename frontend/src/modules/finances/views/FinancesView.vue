@@ -34,6 +34,11 @@ const viewerDefaultPortion = computed(() => {
   return householdStore.split_ratios[authStore.memberId] ?? 50
 })
 
+function openAddSheet() {
+  financesStore.addExpenseStatus = 'idle'
+  showAddSheet.value = true
+}
+
 async function handleExpenseSubmit(payload: NewExpensePayload) {
   await financesStore.addExpense(payload)
 }
@@ -48,9 +53,10 @@ function fmt(currency: string) {
   })
 }
 
-// PocketBase stores dates as "2026-05-23 00:00:00.000Z" (space, not T)
+// Parse "YYYY-MM-DD ..." as local midnight to avoid UTC-to-local shift mangling the date
 function parseExpenseDate(dateStr: string): Date {
-  return new Date(dateStr.replace(' ', 'T'))
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+  return new Date(y!, m! - 1, d!)
 }
 
 function formatDay(dateStr: string): string {
@@ -58,7 +64,7 @@ function formatDay(dateStr: string): string {
 }
 
 function payerLabel(expense: Expense): string {
-  if (expense.id.startsWith('optimistic-') || expense.member_id === authStore.memberId) {
+  if (expense.member_id === authStore.memberId) {
     return 'You paid'
   }
   const member = memberMap.value.get(expense.member_id)
@@ -76,7 +82,7 @@ function customPortion(expense: Expense): string | null {
 // If viewer paid: their portion of the bill (what they keep).
 // If other paid: viewer's proportional slice of the remainder.
 function viewerShareCents(expense: Expense): number {
-  if (expense.member_id === authStore.memberId || expense.id.startsWith('optimistic-')) {
+  if (expense.member_id === authStore.memberId) {
     return Math.round(expense.amount * expense.portion / 100)
   }
   const remainder = Math.trunc(expense.amount * (100 - expense.portion) / 100)
@@ -143,7 +149,7 @@ const groupedExpenses = computed(() => {
       <button
         type="button"
         class="btn-add-desktop"
-        @click="showAddSheet = true"
+        @click="openAddSheet"
       >
         + Add expense
       </button>
@@ -203,14 +209,14 @@ const groupedExpenses = computed(() => {
           </div>
 
           <!-- Expense items card -->
-          <div class="expense-card">
+          <TransitionGroup tag="div" name="expense-list" class="expense-card">
             <div
-              v-for="(expense, idx) in group.expenses"
+              v-for="expense in group.expenses"
               :key="expense.id"
               class="expense-item"
               :class="{
                 'expense-item--new': expense.id.startsWith('optimistic-'),
-                'expense-item--last': idx === group.expenses.length - 1,
+                'expense-item--last': expense === group.expenses[group.expenses.length - 1],
               }"
             >
               <!-- Avatar -->
@@ -239,7 +245,7 @@ const groupedExpenses = computed(() => {
                 </span>
               </div>
             </div>
-          </div>
+          </TransitionGroup>
         </div>
       </template>
     </div>
@@ -250,7 +256,7 @@ const groupedExpenses = computed(() => {
     type="button"
     class="fab"
     aria-label="Add expense"
-    @click="showAddSheet = true"
+    @click="openAddSheet"
   >
     <i class="pi pi-plus" />
   </button>

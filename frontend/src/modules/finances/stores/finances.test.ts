@@ -297,6 +297,7 @@ describe('addExpense', () => {
 
   it('immediately adds optimistic expense to front of expenses array', async () => {
     const store = useFinancesStore()
+    store.loadStatus = 'success'
     const existing = makeExpense({ id: 'existing-1' })
     store.expenses = [existing]
 
@@ -316,6 +317,7 @@ describe('addExpense', () => {
 
   it('sets addExpenseStatus to "loading" during write, "success" after', async () => {
     const store = useFinancesStore()
+    store.loadStatus = 'success'
     mockCreateFn.mockResolvedValueOnce(serverRecord)
 
     expect(store.addExpenseStatus).toBe('idle')
@@ -327,6 +329,7 @@ describe('addExpense', () => {
 
   it('replaces optimistic entry with real record on success', async () => {
     const store = useFinancesStore()
+    store.loadStatus = 'success'
     mockCreateFn.mockResolvedValueOnce(serverRecord)
 
     await store.addExpense(payload)
@@ -337,6 +340,7 @@ describe('addExpense', () => {
 
   it('reverts expenses to snapshot and sets status to "error" on failure', async () => {
     const store = useFinancesStore()
+    store.loadStatus = 'success'
     const existing = makeExpense({ id: 'existing-1' })
     store.expenses = [existing]
     mockCreateFn.mockRejectedValueOnce(new Error('Network error'))
