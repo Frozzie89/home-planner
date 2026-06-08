@@ -21,15 +21,15 @@ routerAdd('POST', '/api/household/complete-setup', (e) => {
     // Guard: household must exist
     $app.findRecordById('households', householdId) // throws if not found
 
-    // Guard: user must not already be a member
+    // Guard: household must have no members yet (first-admin path only)
     const existing = $app.findRecordsByFilter(
       'members',
-      'user_id = {:userId} && household_id = {:householdId}',
+      'household_id = {:householdId}',
       '', 1, 0,
-      { userId, householdId }
+      { householdId }
     )
     if (existing.length > 0) {
-      return e.json(409, { message: 'Already a member of this household' })
+      return e.json(409, { message: 'Household already has members' })
     }
 
     const membersCol = $app.findCollectionByNameOrId('members')

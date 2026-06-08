@@ -22,7 +22,7 @@ vi.mock('@/shared/lib/pocketbase', () => ({
   pb: {
     collection: (name: string) => {
       if (name === 'households') return { create: mockHouseholdsCreate, update: mockHouseholdsUpdate }
-      return { create: vi.fn(), update: mockHouseholdsUpdate }
+      return { create: vi.fn(), update: vi.fn() }
     },
     send: mockSend,
   },

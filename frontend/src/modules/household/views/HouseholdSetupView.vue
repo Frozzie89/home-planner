@@ -101,6 +101,10 @@ async function handleSubmit() {
       body: { household_id: household.id },
     })
 
+    if (!setupResult?.memberId) {
+      throw new Error('Setup hook returned no memberId')
+    }
+
     await pb.collection('households').update(household.id, {
       split_ratios: { [setupResult.memberId]: 100 },
     })
