@@ -111,6 +111,7 @@ async function handleSubmit() {
 
     authStore.householdId = household.id
     authStore.role = 'admin'
+    authStore.memberId = setupResult.memberId
 
     householdStore.populate({
       id: household.id,
