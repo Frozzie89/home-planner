@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { pb } from '@/shared/lib/pocketbase'
 import { useAuthStore } from '@/shared/stores/auth'
@@ -7,15 +7,19 @@ import type { Expense, Balance } from '@/modules/finances/types'
 import type { MemberRecord } from '@/modules/household/types'
 
 export const useFinancesStore = defineStore('finances', () => {
+  const authStore = useAuthStore()
   const expenses = ref<Expense[]>([])
   const members = ref<MemberRecord[]>([])
   const loadStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+
+  watch(() => authStore.isAuthenticated, (isAuth) => {
+    if (!isAuth) reset()
+  })
 
   // Bilateral balances: one entry per (viewer, otherMember) pair.
   // Positive = viewer is owed; Negative = viewer owes.
   // All arithmetic operates on integer cents — never floats.
   const bilateralBalances = computed<Balance[]>(() => {
-    const authStore = useAuthStore()
     const householdStore = useHouseholdStore()
     const viewerMemberId = authStore.memberId
     if (!viewerMemberId || members.value.length < 2) return []
@@ -59,7 +63,6 @@ export const useFinancesStore = defineStore('finances', () => {
 
   async function load() {
     if (loadStatus.value === 'loading') return
-    const authStore = useAuthStore()
     if (!authStore.householdId) {
       loadStatus.value = 'error'
       return

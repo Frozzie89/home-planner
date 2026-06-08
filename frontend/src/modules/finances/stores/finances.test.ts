@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { reactive } from 'vue'
+import { flushPromises } from '@vue/test-utils'
 import { useFinancesStore } from './finances'
 import type { Expense } from '@/modules/finances/types'
 import type { MemberRecord } from '@/modules/household/types'
@@ -16,7 +18,7 @@ const {
   mockFilter: vi.fn((expr: string, params: Record<string, unknown>) =>
     Object.entries(params).reduce((s, [k, v]) => s.replace(`{:${k}}`, String(v)), expr)
   ),
-  mockUseAuthStore: vi.fn(() => ({ memberId: 'member-a', householdId: 'hh-1' })),
+  mockUseAuthStore: vi.fn(),
   mockUseHouseholdStore: vi.fn(() => ({
     split_ratios: { 'member-a': 50, 'member-b': 50 },
     currency: 'EUR',
@@ -36,6 +38,13 @@ vi.mock('@/shared/lib/pocketbase', () => ({
     }),
   },
 }))
+
+// Persistent reactive auth state — used by the store's isAuthenticated watcher
+const sharedAuthState = reactive({
+  memberId: 'member-a',
+  householdId: 'hh-1',
+  isAuthenticated: true as boolean,
+})
 
 vi.mock('@/shared/stores/auth', () => ({ useAuthStore: mockUseAuthStore }))
 
@@ -74,7 +83,9 @@ beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
   // Restore defaults after each test
-  mockUseAuthStore.mockReturnValue({ memberId: 'member-a', householdId: 'hh-1' })
+  sharedAuthState.memberId = 'member-a'
+  sharedAuthState.isAuthenticated = true
+  mockUseAuthStore.mockReturnValue(sharedAuthState)
   mockUseHouseholdStore.mockReturnValue({
     split_ratios: { 'member-a': 50, 'member-b': 50 },
     currency: 'EUR',
@@ -246,5 +257,21 @@ describe('load', () => {
     expect(mockGetFullListMembers).toHaveBeenCalledWith(
       expect.not.objectContaining({ filter: expect.anything() })
     )
+  })
+})
+
+describe('reset on logout', () => {
+  it('resets store when isAuthenticated becomes false', async () => {
+    const store = useFinancesStore()
+    store.expenses = [{ id: 'e1', title: 'Groceries', amount: 1000, date: '2026-01-01', portion: 50, member_id: 'member-a', household_id: 'hh-1', created: '', updated: '' }]
+    store.members = [{ id: 'member-a', household_id: 'hh-1', user_id: 'user-a', role: 'admin', display_name: 'Alice', created: '', updated: '' }]
+    store.loadStatus = 'success'
+
+    sharedAuthState.isAuthenticated = false
+    await flushPromises()
+
+    expect(store.expenses).toHaveLength(0)
+    expect(store.members).toHaveLength(0)
+    expect(store.loadStatus).toBe('idle')
   })
 })
