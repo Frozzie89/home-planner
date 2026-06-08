@@ -65,6 +65,13 @@ function payerLabel(expense: Expense): string {
   return member ? `${getMemberName(member)} paid` : 'Someone paid'
 }
 
+// Returns the portion as "70%" only when it differs from the payer's default split ratio.
+function customPortion(expense: Expense): string | null {
+  const defaultRatio = householdStore.split_ratios[expense.member_id]
+  if (defaultRatio === undefined || expense.portion === defaultRatio) return null
+  return `${expense.portion}%`
+}
+
 // Viewer's share in integer cents.
 // If viewer paid: their portion of the bill (what they keep).
 // If other paid: viewer's proportional slice of the remainder.
@@ -218,7 +225,7 @@ const groupedExpenses = computed(() => {
               <div class="expense-content">
                 <span class="expense-title">{{ expense.title }}</span>
                 <span class="expense-meta">
-                  {{ payerLabel(expense) }} · {{ formatDay(expense.date) }}
+                  {{ payerLabel(expense) }} · {{ formatDay(expense.date) }}{{ customPortion(expense) ? ` · ${customPortion(expense)}` : '' }}
                 </span>
               </div>
 
@@ -374,6 +381,7 @@ const groupedExpenses = computed(() => {
 
 .expense-card {
   background: var(--p-surface-card);
+  border: 1px solid var(--p-surface-border);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -385,7 +393,7 @@ const groupedExpenses = computed(() => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-2);
-  border-bottom: 1px solid var(--p-surface-border, rgba(0,0,0,0.06));
+  border-bottom: 1px solid var(--p-surface-border);
   transition: background-color 600ms ease-out;
 }
 
