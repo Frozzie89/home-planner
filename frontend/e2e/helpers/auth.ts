@@ -213,6 +213,59 @@ export async function mockHouseholdsApi(page: Page) {
   )
 }
 
+// Mock PATCH /api/collections/expenses/records/:id (update expense).
+// Other methods fall through via route.fallback().
+export async function mockExpenseUpdateApi(
+  page: Page,
+  id: string,
+  updatedExpense: MockExpense,
+  options: { failWithStatus?: number } = {},
+) {
+  await page.route(`${PB_URL}/api/collections/expenses/records/${id}`, (route) => {
+    if (route.request().method() !== 'PATCH') {
+      route.fallback()
+      return
+    }
+    if (options.failWithStatus) {
+      route.fulfill({
+        status: options.failWithStatus,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: options.failWithStatus, message: 'Server error', data: {} }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(updatedExpense),
+      })
+    }
+  })
+}
+
+// Mock DELETE /api/collections/expenses/records/:id.
+// Other methods fall through via route.fallback().
+export async function mockExpenseDeleteApi(
+  page: Page,
+  id: string,
+  options: { failWithStatus?: number } = {},
+) {
+  await page.route(`${PB_URL}/api/collections/expenses/records/${id}`, (route) => {
+    if (route.request().method() !== 'DELETE') {
+      route.fallback()
+      return
+    }
+    if (options.failWithStatus) {
+      route.fulfill({
+        status: options.failWithStatus,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: options.failWithStatus, message: 'Server error', data: {} }),
+      })
+    } else {
+      route.fulfill({ status: 204 })
+    }
+  })
+}
+
 // ─── Auth callback helpers ────────────────────────────────────────────────────
 
 // State token shared between injectOAuthProviderSession and callback URL params.
