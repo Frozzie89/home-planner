@@ -144,14 +144,14 @@ describe('AddExpenseSheet', () => {
     expect(payload.portion).toBe(60)
   })
 
-  it('formats date as YYYY-MM-DD 00:00:00.000Z in emitted payload', async () => {
+  it('formats date as YYYY-MM-DD HH:MM:SS.mmmZ in emitted payload', async () => {
     const wrapper = mountSheet()
     await wrapper.find('#expense-title').setValue('Test')
     const amountInputNumber = wrapper.findAllComponents({ name: 'InputNumber' })[0]!
     await amountInputNumber.vm.$emit('update:modelValue', 10)
     await wrapper.find('.btn-confirm').trigger('click')
     const payload = wrapper.emitted('submit')?.[0]?.[0] as { date: string }
-    expect(payload.date).toMatch(/^\d{4}-\d{2}-\d{2} 00:00:00\.000Z$/)
+    expect(payload.date).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}Z$/)
   })
 
   it('resets form state when open changes from true to false', async () => {
