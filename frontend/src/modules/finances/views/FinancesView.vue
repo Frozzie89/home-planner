@@ -51,12 +51,14 @@ const deletingExpense = ref<Expense | null>(null)
 const showDeleteConfirm = ref(false)
 
 function handleEditExpense(expense: Expense) {
+  if (financesStore.deleteExpenseStatus === 'loading') return
   financesStore.updateExpenseStatus = 'idle'
   editingExpense.value = expense
   showEditSheet.value = true
 }
 
 function handleDeleteExpense(expense: Expense) {
+  if (financesStore.updateExpenseStatus === 'loading') return
   financesStore.deleteExpenseStatus = 'idle'
   deletingExpense.value = expense
   showDeleteConfirm.value = true

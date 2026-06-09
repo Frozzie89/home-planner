@@ -155,6 +155,73 @@ test('admin can access edit and delete on all expenses', async ({ page }) => {
   })
 })
 
+// 3.3-E8: PATCH failure — edit reverts and error banner appears
+test('edit failure reverts expense and shows error banner', async ({ page }) => {
+  await test.step('set up mocks with failing PATCH', async () => {
+    await setupMocks(page)
+    await mockExpenseUpdateApi(page, 'exp-viewer', VIEWER_EXPENSE, { failWithStatus: 500 })
+  })
+  await test.step('navigate and open edit sheet', async () => {
+    await page.goto('/finances')
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'Edit expense' }).first().click()
+  })
+  await test.step('change title and save', async () => {
+    await page.getByLabel('Title').fill('Should Not Stick')
+    await page.getByRole('button', { name: 'Save Changes' }).click()
+  })
+  await test.step('verify original title restored and error banner visible', async () => {
+    await expect(page.getByText('Groceries')).toBeVisible()
+    await expect(page.getByRole('alert').filter({ hasText: "Couldn't save the changes" })).toBeVisible()
+  })
+})
+
+// 3.3-E9: DELETE failure — expense reverts and error banner appears
+test('delete failure reverts expense and shows error banner', async ({ page }) => {
+  await test.step('set up mocks with failing DELETE', async () => {
+    await setupMocks(page)
+    await mockExpenseDeleteApi(page, 'exp-viewer', { failWithStatus: 500 })
+  })
+  await test.step('navigate and click delete', async () => {
+    await page.goto('/finances')
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'Delete expense' }).first().click()
+  })
+  await test.step('confirm deletion', async () => {
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.getByRole('button', { name: 'Delete' }).click()
+  })
+  await test.step('verify expense restored and error banner visible', async () => {
+    await expect(page.getByText('Groceries')).toBeVisible()
+    await expect(page.getByRole('alert').filter({ hasText: "Couldn't delete the expense" })).toBeVisible()
+  })
+})
+
+// 3.3-E10: Empty state after last expense is deleted
+test('empty state appears after last expense is deleted', async ({ page }) => {
+  await test.step('set up mocks with single expense', async () => {
+    await injectAuth(page)
+    await mockRemainingPbCalls(page)
+    await mockHouseholdsApi(page)
+    await mockSettingsMembersApi(page)
+    await mockExpensesApi(page, [VIEWER_EXPENSE])
+    await mockExpenseDeleteApi(page, 'exp-viewer')
+  })
+  await test.step('navigate to finances', async () => {
+    await page.goto('/finances')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Groceries')).toBeVisible()
+  })
+  await test.step('delete the only expense', async () => {
+    await page.getByRole('button', { name: 'Delete expense' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.getByRole('button', { name: 'Delete' }).click()
+  })
+  await test.step('verify empty state appears', async () => {
+    await expect(page.getByText('Nothing here yet — add your first expense')).toBeVisible()
+  })
+})
+
 // 3.3-E7: WCAG 2.1 AA
 test('expense list with items has no WCAG 2.1 AA violations', async ({ page }) => {
   await test.step('set up mocks', async () => { await setupMocks(page) })

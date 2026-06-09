@@ -187,7 +187,10 @@ export const useFinancesStore = defineStore('finances', () => {
       }
       updateExpenseStatus.value = 'success'
     } catch {
-      if (!authStore.isAuthenticated) return
+      if (!authStore.isAuthenticated) {
+        updateExpenseStatus.value = 'idle'
+        return
+      }
       expenses.value = snapshot
       updateExpenseStatus.value = 'error'
     }
@@ -206,7 +209,10 @@ export const useFinancesStore = defineStore('finances', () => {
       await pb.collection('expenses').delete(id)
       deleteExpenseStatus.value = 'success'
     } catch {
-      if (!authStore.isAuthenticated) return
+      if (!authStore.isAuthenticated) {
+        deleteExpenseStatus.value = 'idle'
+        return
+      }
       expenses.value = snapshot
       deleteExpenseStatus.value = 'error'
     }
