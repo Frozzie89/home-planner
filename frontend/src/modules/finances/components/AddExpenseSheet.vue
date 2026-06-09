@@ -69,7 +69,7 @@ watch(open, (isOpen) => {
     titleTouched.value = false
     amountTouched.value = false
   }
-})
+}, { flush: 'sync' })
 </script>
 
 <template>
