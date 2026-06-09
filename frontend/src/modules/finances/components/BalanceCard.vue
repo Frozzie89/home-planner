@@ -10,13 +10,14 @@ const props = defineProps<{
   otherMember: MemberRecord
   currency: string
   settled?: boolean
+  hasExpenses?: boolean
   headerLabel?: string  // "YOUR BALANCE" for single-pair, "WITH [NAME]" for multi-pair
 }>()
 
 const isPositive = computed(() => props.balance.amount > 0)
 const isNegative = computed(() => props.balance.amount < 0)
 const isZero = computed(() => props.balance.amount === 0)
-const isZeroFresh = computed(() => isZero.value && !props.settled)
+const isZeroFresh = computed(() => isZero.value && !props.settled && !props.hasExpenses)
 const isZeroSettled = computed(() => isZero.value && props.settled)
 
 const otherName = computed(() => getMemberName(props.otherMember))
