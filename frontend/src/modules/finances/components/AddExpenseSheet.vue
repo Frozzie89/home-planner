@@ -191,7 +191,7 @@ watch(open, (isOpen) => {
   width: 100%;
   min-height: 48px;
   background-color: var(--p-primary-color);
-  color: white;
+  color: var(--p-primary-contrast-color);
   border: none;
   border-radius: 8px;
   font-size: 1rem;

@@ -28,10 +28,10 @@ const HomePlannerPreset = definePreset(Aura, {
     colorScheme: {
       light: {
         surface: {
-          ground:   '#FAF7F2',
-          section:  '#FAF7F2',
-          card:     '#F5F0E8',
-          overlay:  '#F5F0E8',
+          ground:   '#F5F0E8',
+          section:  '#F5F0E8',
+          card:     '#FAF7F2',
+          overlay:  '#FAF7F2',
           border:   '#E8E2D9',
           hover:    '#F0EBE0',
         },
