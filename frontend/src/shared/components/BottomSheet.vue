@@ -95,7 +95,7 @@ watch(open, async (isOpen) => {
         >
           <div v-if="props.title" class="sheet-header">
             <h3 class="sheet-title">{{ props.title }}</h3>
-            <button class="sheet-close" aria-label="Close" @click="open = false">
+            <button class="sheet-close" aria-label="Close" @mousedown.prevent @click="open = false">
               <i class="pi pi-times" />
             </button>
           </div>
