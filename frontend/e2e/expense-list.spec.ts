@@ -111,9 +111,8 @@ test("member role cannot see edit button on another member's expense", async ({ 
     await page.goto('/finances')
     await page.waitForLoadState('networkidle')
   })
-  await test.step("hover Bob's expense — no edit button should appear", async () => {
-    await page.getByText('Dinner').hover()
-    await expect(page.getByRole('button', { name: 'Edit expense' })).toHaveCount(0)
+  await test.step("verify only viewer's own expense has edit button (not Bob's)", async () => {
+    await expect(page.getByRole('button', { name: 'Edit expense' })).toHaveCount(1)
   })
 })
 
@@ -131,7 +130,7 @@ test('owner can delete own expense and list updates', async ({ page }) => {
   })
   await test.step('confirm deletion in bottom sheet', async () => {
     await expect(page.getByRole('dialog')).toBeVisible()
-    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
   })
   await test.step('verify expense removed from list', async () => {
     await expect(page.getByText('Groceries')).not.toBeVisible()
@@ -148,10 +147,9 @@ test('admin can access edit and delete on all expenses', async ({ page }) => {
     await page.goto('/finances')
     await page.waitForLoadState('networkidle')
   })
-  await test.step("hover Bob's expense — edit and delete buttons appear", async () => {
-    await page.getByText('Dinner').hover()
-    await expect(page.getByRole('button', { name: 'Edit expense' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Delete expense' })).toBeVisible()
+  await test.step('verify edit and delete buttons present for both expenses', async () => {
+    await expect(page.getByRole('button', { name: 'Edit expense' })).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Delete expense' })).toHaveCount(2)
   })
 })
 
@@ -189,7 +187,7 @@ test('delete failure reverts expense and shows error banner', async ({ page }) =
   })
   await test.step('confirm deletion', async () => {
     await expect(page.getByRole('dialog')).toBeVisible()
-    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
   })
   await test.step('verify expense restored and error banner visible', async () => {
     await expect(page.getByText('Groceries')).toBeVisible()
@@ -215,7 +213,7 @@ test('empty state appears after last expense is deleted', async ({ page }) => {
   await test.step('delete the only expense', async () => {
     await page.getByRole('button', { name: 'Delete expense' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
-    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
   })
   await test.step('verify empty state appears', async () => {
     await expect(page.getByText('Nothing here yet — add your first expense')).toBeVisible()
