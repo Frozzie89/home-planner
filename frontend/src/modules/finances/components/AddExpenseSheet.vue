@@ -46,7 +46,8 @@ function handleConfirm() {
   if (!canConfirm.value) return
   const amountCents = Math.round(amountRaw.value! * 100)
   const d = date.value
-  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} 00:00:00.000Z`
+  const now = new Date()
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}Z`
   emit('submit', {
     title: title.value.trim(),
     amount: amountCents,
