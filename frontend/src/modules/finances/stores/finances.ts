@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { pb } from '@/shared/lib/pocketbase'
 import { useAuthStore } from '@/shared/stores/auth'
 import { useHouseholdStore } from '@/modules/household/stores/household'
-import type { Expense, Balance, NewExpensePayload } from '@/modules/finances/types'
+import type { Expense, Balance, NewExpensePayload, UpdateExpensePayload } from '@/modules/finances/types'
 import type { MemberRecord } from '@/modules/household/types'
 
 export const useFinancesStore = defineStore('finances', () => {
@@ -12,6 +12,8 @@ export const useFinancesStore = defineStore('finances', () => {
   const members = ref<MemberRecord[]>([])
   const loadStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
   const addExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+  const updateExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+  const deleteExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 
   watch(() => authStore.isAuthenticated, (isAuth) => {
     if (!isAuth) reset()
@@ -143,12 +145,86 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  async function updateExpense(id: string, payload: UpdateExpensePayload) {
+    if (!authStore.householdId || !authStore.memberId) return
+    if (updateExpenseStatus.value === 'loading') return
+
+    updateExpenseStatus.value = 'loading'
+    const snapshot = [...expenses.value]
+
+    const idx = expenses.value.findIndex(e => e.id === id)
+    if (idx < 0) {
+      updateExpenseStatus.value = 'error'
+      return
+    }
+
+    const optimistic: Expense = {
+      ...expenses.value[idx]!,
+      title: payload.title,
+      amount: payload.amount,
+      portion: payload.portion,
+      date: payload.date,
+      updated: new Date().toISOString(),
+    }
+    const withUpdate = [...expenses.value]
+    withUpdate[idx] = optimistic
+    withUpdate.sort((a, b) => b.date.localeCompare(a.date))
+    expenses.value = withUpdate
+
+    try {
+      const result = await pb.collection('expenses').update<Expense>(id, {
+        title: payload.title,
+        amount: payload.amount,
+        portion: payload.portion,
+        date: payload.date,
+      })
+      const syncIdx = expenses.value.findIndex(e => e.id === id)
+      if (syncIdx >= 0) {
+        const synced = [...expenses.value]
+        synced[syncIdx] = result
+        synced.sort((a, b) => b.date.localeCompare(a.date))
+        expenses.value = synced
+      }
+      updateExpenseStatus.value = 'success'
+    } catch {
+      if (!authStore.isAuthenticated) return
+      expenses.value = snapshot
+      updateExpenseStatus.value = 'error'
+    }
+  }
+
+  async function deleteExpense(id: string) {
+    if (!authStore.householdId) return
+    if (deleteExpenseStatus.value === 'loading') return
+
+    deleteExpenseStatus.value = 'loading'
+    const snapshot = [...expenses.value]
+
+    expenses.value = expenses.value.filter(e => e.id !== id)
+
+    try {
+      await pb.collection('expenses').delete(id)
+      deleteExpenseStatus.value = 'success'
+    } catch {
+      if (!authStore.isAuthenticated) return
+      expenses.value = snapshot
+      deleteExpenseStatus.value = 'error'
+    }
+  }
+
   function reset() {
     expenses.value = []
     members.value = []
     loadStatus.value = 'idle'
     addExpenseStatus.value = 'idle'
+    updateExpenseStatus.value = 'idle'
+    deleteExpenseStatus.value = 'idle'
   }
 
-  return { expenses, members, loadStatus, bilateralBalances, load, reset, addExpenseStatus, addExpense }
+  return {
+    expenses, members, loadStatus, bilateralBalances, load, reset,
+    addExpenseStatus, addExpense,
+    updateExpenseStatus, updateExpense,
+    deleteExpenseStatus, deleteExpense,
+  }
 })
