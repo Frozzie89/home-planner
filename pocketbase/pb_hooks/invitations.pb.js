@@ -3,6 +3,22 @@ onRecordCreate((e) => {
   if (e.record.collection().name !== 'invitations') {
     return e.next()
   }
+
+  const householdId = e.record.get('household_id')
+  if (householdId) {
+    const existing = $app.findRecordsByFilter(
+      'invitations',
+      'household_id = {:hid} && accepted = false',
+      '',
+      1,
+      0,
+      { hid: householdId }
+    )
+    if (existing.length > 0) {
+      throw new Error('A pending invitation already exists for this household')
+    }
+  }
+
   try {
     e.record.set(
       'token',
