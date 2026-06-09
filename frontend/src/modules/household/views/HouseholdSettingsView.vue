@@ -295,6 +295,7 @@ function closeInviteSheet() {
 
 async function handleInviteOpen() {
   if (!authStore.householdId) return
+  if (inviteStatus.value === 'loading') return
   inviteStatus.value = 'loading'
   try {
     // Reuse an existing unaccepted invite to avoid accumulating orphaned tokens

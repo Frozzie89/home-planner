@@ -137,6 +137,7 @@ async function confirmDelete() {
           :other-member="memberMap.get(balance.member_b_id)!"
           :currency="householdStore.currency"
           :settled="false"
+          :has-expenses="financesStore.expenses.length > 0"
           :header-label="isSinglePair ? 'YOUR BALANCE' : undefined"
         />
       </template>

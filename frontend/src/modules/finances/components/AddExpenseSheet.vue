@@ -69,7 +69,7 @@ watch(open, (isOpen) => {
     titleTouched.value = false
     amountTouched.value = false
   }
-})
+}, { flush: 'sync' })
 </script>
 
 <template>
@@ -80,7 +80,7 @@ watch(open, (isOpen) => {
         id="expense-title"
         v-model="title"
         placeholder="e.g. Groceries"
-        @blur="titleTouched = true"
+        @blur="() => { if (open) titleTouched = true }"
       />
       <span v-if="titleError" class="field-error-text">{{ titleError }}</span>
     </div>
