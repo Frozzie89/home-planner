@@ -27,3 +27,10 @@ export interface NewExpensePayload {
   date: string     // ISO date string, e.g. "2026-06-08 00:00:00.000Z"
   portion: number  // integer percentage of viewer's share, e.g. 50 = 50%
 }
+
+export interface UpdateExpensePayload {
+  title: string
+  amount: number   // integer cents, e.g. 4580 = €45.80
+  date: string     // PocketBase datetime string, e.g. "2026-06-09 00:00:00.000Z"
+  portion: number  // integer percentage, e.g. 50 = 50%
+}
