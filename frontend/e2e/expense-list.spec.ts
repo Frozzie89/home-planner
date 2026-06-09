@@ -162,6 +162,7 @@ test('edit failure reverts expense and shows error banner', async ({ page }) => 
   await test.step('navigate and open edit sheet', async () => {
     await page.goto('/finances')
     await page.waitForLoadState('networkidle')
+    await page.getByText('Groceries').hover()
     await page.getByRole('button', { name: 'Edit expense' }).first().click()
   })
   await test.step('change title and save', async () => {
@@ -183,6 +184,7 @@ test('delete failure reverts expense and shows error banner', async ({ page }) =
   await test.step('navigate and click delete', async () => {
     await page.goto('/finances')
     await page.waitForLoadState('networkidle')
+    await page.getByText('Groceries').hover()
     await page.getByRole('button', { name: 'Delete expense' }).first().click()
   })
   await test.step('confirm deletion', async () => {
@@ -211,6 +213,7 @@ test('empty state appears after last expense is deleted', async ({ page }) => {
     await expect(page.getByText('Groceries')).toBeVisible()
   })
   await test.step('delete the only expense', async () => {
+    await page.getByText('Groceries').hover()
     await page.getByRole('button', { name: 'Delete expense' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     await page.getByRole('button', { name: 'Delete', exact: true }).click()
