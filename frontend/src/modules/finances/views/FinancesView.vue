@@ -209,7 +209,7 @@ const groupedExpenses = computed(() => {
           </div>
 
           <!-- Expense items card -->
-          <TransitionGroup tag="div" name="expense-list" class="expense-card">
+          <TransitionGroup tag="div" name="expense-list" class="expense-card" :css="false">
             <div
               v-for="expense in group.expenses"
               :key="expense.id"

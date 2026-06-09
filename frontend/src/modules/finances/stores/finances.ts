@@ -116,7 +116,9 @@ export const useFinancesStore = defineStore('finances', () => {
     }
 
     const snapshot = [...expenses.value]
-    expenses.value = [optimisticExpense, ...expenses.value]
+    const withOptimistic = [optimisticExpense, ...expenses.value]
+    withOptimistic.sort((a, b) => b.date.localeCompare(a.date))
+    expenses.value = withOptimistic
 
     try {
       const created = await pb.collection('expenses').create<Expense>({
@@ -129,11 +131,9 @@ export const useFinancesStore = defineStore('finances', () => {
       })
       const idx = expenses.value.findIndex(e => e.id === optimisticId)
       if (idx >= 0) {
-        expenses.value = [
-          ...expenses.value.slice(0, idx),
-          created,
-          ...expenses.value.slice(idx + 1),
-        ]
+        const updated = [...expenses.value.slice(0, idx), created, ...expenses.value.slice(idx + 1)]
+        updated.sort((a, b) => b.date.localeCompare(a.date))
+        expenses.value = updated
       }
       addExpenseStatus.value = 'success'
     } catch {
