@@ -10,6 +10,8 @@ const {
   mockGetFullListExpenses,
   mockGetFullListMembers,
   mockCreateFn,
+  mockUpdateFn,
+  mockDeleteFn,
   mockFilter,
   mockUseAuthStore,
   mockUseHouseholdStore,
@@ -17,6 +19,8 @@ const {
   mockGetFullListExpenses: vi.fn(),
   mockGetFullListMembers: vi.fn(),
   mockCreateFn: vi.fn(),
+  mockUpdateFn: vi.fn(),
+  mockDeleteFn: vi.fn(),
   mockFilter: vi.fn((expr: string, params: Record<string, unknown>) =>
     Object.entries(params).reduce((s, [k, v]) => s.replace(`{:${k}}`, String(v)), expr)
   ),
@@ -38,6 +42,8 @@ vi.mock('@/shared/lib/pocketbase', () => ({
             ? mockGetFullListMembers
             : vi.fn(),
       create: name === 'expenses' ? mockCreateFn : vi.fn(),
+      update: name === 'expenses' ? mockUpdateFn : vi.fn(),
+      delete: name === 'expenses' ? mockDeleteFn : vi.fn(),
     }),
   },
 }))
@@ -361,5 +367,145 @@ describe('addExpense', () => {
 
     expect(mockCreateFn).not.toHaveBeenCalled()
     expect(store.expenses).toHaveLength(0)
+  })
+})
+
+describe('updateExpense', () => {
+  const updatePayload = {
+    title: 'Updated Groceries',
+    amount: 6000,
+    portion: 60,
+    date: '2026-06-09 00:00:00.000Z',
+  }
+
+  const serverRecord = makeExpense({
+    id: 'exp-1',
+    title: 'Updated Groceries',
+    amount: 6000,
+    portion: 60,
+    date: '2026-06-09 00:00:00.000Z',
+  })
+
+  it('immediately updates the matching expense optimistically', async () => {
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1', title: 'Groceries' })]
+
+    let resolveUpdate!: (v: Expense) => void
+    mockUpdateFn.mockReturnValueOnce(new Promise<Expense>(res => { resolveUpdate = res }))
+
+    const updatePromise = store.updateExpense('exp-1', updatePayload)
+    expect(store.expenses[0]!.title).toBe('Updated Groceries')
+
+    resolveUpdate(serverRecord)
+    await updatePromise
+  })
+
+  it('sets updateExpenseStatus to "loading" then "success"', async () => {
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1' })]
+    mockUpdateFn.mockResolvedValueOnce(serverRecord)
+
+    expect(store.updateExpenseStatus).toBe('idle')
+    const updatePromise = store.updateExpense('exp-1', updatePayload)
+    expect(store.updateExpenseStatus).toBe('loading')
+    await updatePromise
+    expect(store.updateExpenseStatus).toBe('success')
+  })
+
+  it('replaces optimistic entry with server record on success', async () => {
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1', title: 'Groceries' })]
+    mockUpdateFn.mockResolvedValueOnce(serverRecord)
+
+    await store.updateExpense('exp-1', updatePayload)
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.title).toBe('Updated Groceries')
+    expect(store.expenses[0]!.amount).toBe(6000)
+  })
+
+  it('reverts expenses to snapshot and sets status to "error" on failure', async () => {
+    const store = useFinancesStore()
+    const original = makeExpense({ id: 'exp-1', title: 'Groceries' })
+    store.expenses = [original]
+    mockUpdateFn.mockRejectedValueOnce(new Error('Network error'))
+
+    await store.updateExpense('exp-1', updatePayload)
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.title).toBe('Groceries')
+    expect(store.updateExpenseStatus).toBe('error')
+  })
+
+  it('does nothing if householdId is null', async () => {
+    mockUseAuthStore.mockReturnValue({ memberId: 'member-a', householdId: null, isAuthenticated: true })
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1' })]
+
+    await store.updateExpense('exp-1', updatePayload)
+
+    expect(mockUpdateFn).not.toHaveBeenCalled()
+  })
+
+  it('does nothing if expense id not found in list', async () => {
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1' })]
+
+    await store.updateExpense('nonexistent-id', updatePayload)
+
+    expect(mockUpdateFn).not.toHaveBeenCalled()
+    expect(store.updateExpenseStatus).toBe('error')
+  })
+})
+
+describe('deleteExpense', () => {
+  it('immediately removes the expense optimistically', async () => {
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1' }), makeExpense({ id: 'exp-2' })]
+
+    let resolveDelete!: () => void
+    mockDeleteFn.mockReturnValueOnce(new Promise<void>(res => { resolveDelete = res }))
+
+    const deletePromise = store.deleteExpense('exp-1')
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.id).toBe('exp-2')
+
+    resolveDelete()
+    await deletePromise
+  })
+
+  it('sets deleteExpenseStatus to "loading" then "success"', async () => {
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1' })]
+    mockDeleteFn.mockResolvedValueOnce(undefined)
+
+    expect(store.deleteExpenseStatus).toBe('idle')
+    const deletePromise = store.deleteExpense('exp-1')
+    expect(store.deleteExpenseStatus).toBe('loading')
+    await deletePromise
+    expect(store.deleteExpenseStatus).toBe('success')
+  })
+
+  it('reverts expenses to snapshot and sets status to "error" on failure', async () => {
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1' })]
+    mockDeleteFn.mockRejectedValueOnce(new Error('Network error'))
+
+    await store.deleteExpense('exp-1')
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.id).toBe('exp-1')
+    expect(store.deleteExpenseStatus).toBe('error')
+  })
+
+  it('does nothing if householdId is null', async () => {
+    mockUseAuthStore.mockReturnValue({ memberId: 'member-a', householdId: null, isAuthenticated: true })
+    const store = useFinancesStore()
+    store.expenses = [makeExpense({ id: 'exp-1' })]
+
+    await store.deleteExpense('exp-1')
+
+    expect(mockDeleteFn).not.toHaveBeenCalled()
+    expect(store.expenses).toHaveLength(1)
   })
 })
