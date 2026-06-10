@@ -221,6 +221,11 @@ const amountClass = computed(() => ({
   gap: var(--space-1);
 }
 
+.balance-card.state-settled .balance-sublabel {
+  color: var(--color-balance-positive, #4A9068);
+  font-weight: 500;
+}
+
 .settled-checkmark {
   position: absolute;
   top: var(--space-2);
