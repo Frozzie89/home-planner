@@ -344,6 +344,29 @@ describe('addExpense', () => {
     expect(store.expenses[0]!.id).toBe('real-id-from-server')
   })
 
+  it('deduplicates when SSE echo arrives before POST response (SSE-before-POST race)', async () => {
+    const store = useFinancesStore()
+    store.loadStatus = 'success'
+
+    let resolveCreate!: (v: Expense) => void
+    mockCreateFn.mockReturnValueOnce(new Promise<Expense>(res => { resolveCreate = res }))
+
+    const addPromise = store.addExpense(payload)
+
+    // SSE echo arrives while optimistic entry is still in the list
+    store.applySSEEvent('create', serverRecord)
+
+    // At this point: optimistic entry + SSE-added real record = 2 entries
+    expect(store.expenses).toHaveLength(2)
+
+    // POST response arrives — should collapse to exactly 1 entry
+    resolveCreate(serverRecord)
+    await addPromise
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.id).toBe('real-id-from-server')
+  })
+
   it('reverts expenses to snapshot and sets status to "error" on failure', async () => {
     const store = useFinancesStore()
     store.loadStatus = 'success'
@@ -455,6 +478,131 @@ describe('updateExpense', () => {
 
     expect(mockUpdateFn).not.toHaveBeenCalled()
     expect(store.updateExpenseStatus).toBe('error')
+  })
+})
+
+describe('applySSEEvent', () => {
+  const EXPENSE_A: Expense = {
+    id: 'exp-a',
+    household_id: 'hh-1',
+    member_id: 'member-a',
+    title: 'Groceries',
+    amount: 5000,
+    portion: 50,
+    date: '2026-06-09 00:00:00.000Z',
+    created: '2026-06-09T00:00:00Z',
+    updated: '2026-06-09T00:00:00Z',
+  }
+  const EXPENSE_B: Expense = {
+    id: 'exp-b',
+    household_id: 'hh-1',
+    member_id: 'member-b',
+    title: 'Dinner',
+    amount: 3000,
+    portion: 50,
+    date: '2026-06-08 00:00:00.000Z',
+    created: '2026-06-08T00:00:00Z',
+    updated: '2026-06-08T00:00:00Z',
+  }
+
+  it('create action adds a new record to the array and sorts by date', () => {
+    const store = useFinancesStore()
+    store.expenses = [EXPENSE_B]
+
+    store.applySSEEvent('create', EXPENSE_A)
+
+    expect(store.expenses).toHaveLength(2)
+    expect(store.expenses[0]!.id).toBe('exp-a') // newer date first
+    expect(store.expenses[1]!.id).toBe('exp-b')
+  })
+
+  it('create action with existing id replaces the record (upsert — handles own write SSE echo)', () => {
+    const store = useFinancesStore()
+    store.expenses = [EXPENSE_A]
+
+    const updated: Expense = { ...EXPENSE_A, amount: 9999 }
+    store.applySSEEvent('create', updated)
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.amount).toBe(9999)
+  })
+
+  it('update action replaces the matching record by id', () => {
+    const store = useFinancesStore()
+    store.expenses = [EXPENSE_A, EXPENSE_B]
+
+    const updated: Expense = { ...EXPENSE_A, title: 'Supermarket', amount: 7500 }
+    store.applySSEEvent('update', updated)
+
+    expect(store.expenses).toHaveLength(2)
+    const found = store.expenses.find(e => e.id === 'exp-a')
+    expect(found!.title).toBe('Supermarket')
+    expect(found!.amount).toBe(7500)
+  })
+
+  it('update action is a no-op when id is not found', () => {
+    const store = useFinancesStore()
+    store.expenses = [EXPENSE_A]
+
+    const ghost: Expense = { ...EXPENSE_B, id: 'nonexistent' }
+    store.applySSEEvent('update', ghost)
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.id).toBe('exp-a')
+  })
+
+  it('delete action removes the matching record by id', () => {
+    const store = useFinancesStore()
+    store.expenses = [EXPENSE_A, EXPENSE_B]
+
+    store.applySSEEvent('delete', EXPENSE_A)
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.id).toBe('exp-b')
+  })
+
+  it('delete action is a no-op when id is not found', () => {
+    const store = useFinancesStore()
+    store.expenses = [EXPENSE_A]
+
+    const ghost: Expense = { ...EXPENSE_B, id: 'nonexistent' }
+    store.applySSEEvent('delete', ghost)
+
+    expect(store.expenses).toHaveLength(1)
+    expect(store.expenses[0]!.id).toBe('exp-a')
+  })
+
+  it('all actions maintain descending date sort order', () => {
+    const EXPENSE_OLD: Expense = {
+      id: 'exp-old',
+      household_id: 'hh-1',
+      member_id: 'member-a',
+      title: 'Old',
+      amount: 1000,
+      portion: 50,
+      date: '2026-06-01 00:00:00.000Z',
+      created: '2026-06-01T00:00:00Z',
+      updated: '2026-06-01T00:00:00Z',
+    }
+    const EXPENSE_NEW: Expense = {
+      id: 'exp-new',
+      household_id: 'hh-1',
+      member_id: 'member-b',
+      title: 'New',
+      amount: 2000,
+      portion: 50,
+      date: '2026-06-10 00:00:00.000Z',
+      created: '2026-06-10T00:00:00Z',
+      updated: '2026-06-10T00:00:00Z',
+    }
+
+    const store = useFinancesStore()
+    store.expenses = [EXPENSE_OLD]
+
+    store.applySSEEvent('create', EXPENSE_NEW)
+
+    expect(store.expenses[0]!.id).toBe('exp-new')
+    expect(store.expenses[1]!.id).toBe('exp-old')
   })
 })
 
