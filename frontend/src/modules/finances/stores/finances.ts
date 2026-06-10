@@ -6,6 +6,9 @@ import { useHouseholdStore } from '@/modules/household/stores/household'
 import type { Expense, Balance, NewExpensePayload, UpdateExpensePayload } from '@/modules/finances/types'
 import type { MemberRecord } from '@/modules/household/types'
 
+const byDateDesc = (a: Expense, b: Expense) =>
+  b.date > a.date ? 1 : b.date < a.date ? -1 : 0
+
 export const useFinancesStore = defineStore('finances', () => {
   const authStore = useAuthStore()
   const expenses = ref<Expense[]>([])
@@ -119,7 +122,7 @@ export const useFinancesStore = defineStore('finances', () => {
 
     const snapshot = [...expenses.value]
     const withOptimistic = [optimisticExpense, ...expenses.value]
-    withOptimistic.sort((a, b) => b.date.localeCompare(a.date))
+    withOptimistic.sort(byDateDesc)
     expenses.value = withOptimistic
 
     try {
@@ -137,7 +140,7 @@ export const useFinancesStore = defineStore('finances', () => {
         // have arrived before this response (SSE-before-POST race).
         const without = expenses.value.filter(e => e.id !== optimisticId && e.id !== created.id)
         const updated = [...without, created]
-        updated.sort((a, b) => b.date.localeCompare(a.date))
+        updated.sort(byDateDesc)
         expenses.value = updated
       }
       addExpenseStatus.value = 'success'
@@ -171,7 +174,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
     const withUpdate = [...expenses.value]
     withUpdate[idx] = optimistic
-    withUpdate.sort((a, b) => b.date.localeCompare(a.date))
+    withUpdate.sort(byDateDesc)
     expenses.value = withUpdate
 
     try {
@@ -185,7 +188,7 @@ export const useFinancesStore = defineStore('finances', () => {
       if (syncIdx >= 0) {
         const synced = [...expenses.value]
         synced[syncIdx] = result
-        synced.sort((a, b) => b.date.localeCompare(a.date))
+        synced.sort(byDateDesc)
         expenses.value = synced
       }
       updateExpenseStatus.value = 'success'
@@ -227,11 +230,11 @@ export const useFinancesStore = defineStore('finances', () => {
       if (idx >= 0) {
         const synced = [...expenses.value]
         synced[idx] = record
-        synced.sort((a, b) => b.date.localeCompare(a.date))
+        synced.sort(byDateDesc)
         expenses.value = synced
       } else {
         const withNew = [...expenses.value, record]
-        withNew.sort((a, b) => b.date.localeCompare(a.date))
+        withNew.sort(byDateDesc)
         expenses.value = withNew
       }
     } else if (action === 'update') {
@@ -239,7 +242,7 @@ export const useFinancesStore = defineStore('finances', () => {
       if (idx >= 0) {
         const updated = [...expenses.value]
         updated[idx] = record
-        updated.sort((a, b) => b.date.localeCompare(a.date))
+        updated.sort(byDateDesc)
         expenses.value = updated
       }
     } else if (action === 'delete') {
