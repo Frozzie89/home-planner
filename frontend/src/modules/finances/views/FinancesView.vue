@@ -18,13 +18,13 @@ const householdStore = useHouseholdStore()
 const authStore = useAuthStore()
 
 function handleSSEEvent(event: RecordSubscription<Expense>) {
-  financesStore.applySSEEvent(event.action, event.record)
+  financesStore.applySSEEvent(event.action as 'create' | 'update' | 'delete', event.record)
 }
 
 onMounted(() => {
   financesStore.load()
   if (authStore.householdId) {
-    pb.collection('expenses').subscribe<Expense>(
+    void pb.collection('expenses').subscribe<Expense>(
       '*',
       handleSSEEvent,
       { filter: `household_id = "${authStore.householdId}"` },

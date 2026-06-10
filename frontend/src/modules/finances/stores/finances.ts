@@ -221,7 +221,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
-  function applySSEEvent(action: string, record: Expense) {
+  function applySSEEvent(action: 'create' | 'update' | 'delete', record: Expense) {
     if (action === 'create') {
       const idx = expenses.value.findIndex(e => e.id === record.id)
       if (idx >= 0) {
