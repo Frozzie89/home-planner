@@ -133,7 +133,10 @@ export const useFinancesStore = defineStore('finances', () => {
       })
       const idx = expenses.value.findIndex(e => e.id === optimisticId)
       if (idx >= 0) {
-        const updated = [...expenses.value.slice(0, idx), created, ...expenses.value.slice(idx + 1)]
+        // Strip the optimistic entry AND any SSE echo of the real record that may
+        // have arrived before this response (SSE-before-POST race).
+        const without = expenses.value.filter(e => e.id !== optimisticId && e.id !== created.id)
+        const updated = [...without, created]
         updated.sort((a, b) => b.date.localeCompare(a.date))
         expenses.value = updated
       }
@@ -218,6 +221,32 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  function applySSEEvent(action: string, record: Expense) {
+    if (action === 'create') {
+      const idx = expenses.value.findIndex(e => e.id === record.id)
+      if (idx >= 0) {
+        const synced = [...expenses.value]
+        synced[idx] = record
+        synced.sort((a, b) => b.date.localeCompare(a.date))
+        expenses.value = synced
+      } else {
+        const withNew = [...expenses.value, record]
+        withNew.sort((a, b) => b.date.localeCompare(a.date))
+        expenses.value = withNew
+      }
+    } else if (action === 'update') {
+      const idx = expenses.value.findIndex(e => e.id === record.id)
+      if (idx >= 0) {
+        const updated = [...expenses.value]
+        updated[idx] = record
+        updated.sort((a, b) => b.date.localeCompare(a.date))
+        expenses.value = updated
+      }
+    } else if (action === 'delete') {
+      expenses.value = expenses.value.filter(e => e.id !== record.id)
+    }
+  }
+
   function reset() {
     expenses.value = []
     members.value = []
@@ -232,5 +261,6 @@ export const useFinancesStore = defineStore('finances', () => {
     addExpenseStatus, addExpense,
     updateExpenseStatus, updateExpense,
     deleteExpenseStatus, deleteExpense,
+    applySSEEvent,
   }
 })
