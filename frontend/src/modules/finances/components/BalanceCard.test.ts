@@ -84,7 +84,7 @@ describe('BalanceCard', () => {
 
     expect(wrapper.find('.balance-card').classes()).toContain('state-settled')
     expect(wrapper.text()).toContain('All settled. Nothing owed.')
-    expect(wrapper.find('.settled-badge').exists()).toBe(true)
+    expect(wrapper.find('.settled-checkmark').exists()).toBe(true)
   })
 
   it('sets aria-live="polite" on the amount element', () => {

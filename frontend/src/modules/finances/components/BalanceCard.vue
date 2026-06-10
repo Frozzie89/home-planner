@@ -152,9 +152,9 @@ const amountClass = computed(() => ({
       <span class="amount-main">{{ amountParts.sign }}{{ amountParts.prefix }}{{ amountParts.intPart }}</span><span class="amount-frac">{{ amountParts.frac }}</span><span v-if="amountParts.suffix" class="amount-main">{{ amountParts.suffix }}</span>
     </div>
     <div class="balance-sublabel">
-      <span v-if="isZeroSettled" class="settled-badge" aria-hidden="true">✓</span>
       {{ sublabel }}
     </div>
+    <div v-if="isZeroSettled" class="settled-checkmark" aria-hidden="true">✓</div>
   </div>
 </template>
 
@@ -168,6 +168,10 @@ const amountClass = computed(() => ({
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  position: relative;
+  @media (prefers-reduced-motion: no-preference) {
+    transition: background-color 300ms ease-out 300ms;
+  }
 }
 
 .balance-card.state-settled {
@@ -217,8 +221,40 @@ const amountClass = computed(() => ({
   gap: var(--space-1);
 }
 
-.settled-badge {
-  color: #D97706;
+.settled-checkmark {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid #E8A838;
+  color: #E8A838;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
   font-weight: 700;
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .balance-card.state-settled .balance-sublabel {
+    animation: settle-sublabel-in 200ms ease-out 500ms both;
+  }
+
+  .balance-card.state-settled .settled-checkmark {
+    animation: settle-badge-in 200ms ease-out 600ms both;
+  }
+
+  @keyframes settle-sublabel-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes settle-badge-in {
+    from { opacity: 0; }
+    to   { opacity: 0.7; }
+  }
 }
 </style>
