@@ -85,24 +85,22 @@ test('expense list updates when SSE create event is injected', async ({ page }) 
 
 // 3.4-E2: Balance updates when SSE create event injected
 test('balance updates when SSE create event is injected', async ({ page }) => {
+  let initialAriaLabel = ''
+
   await test.step('set up mocks and navigate to finances', async () => {
     await setupMocks(page)
     await page.goto('/finances')
     await page.waitForLoadState('networkidle')
     await expect(page.getByText('Groceries')).toBeVisible()
+    initialAriaLabel = await page.locator('.balance-amount').getAttribute('aria-label') ?? ''
   })
 
   await test.step('inject SSE create event for Bob\'s expense', async () => {
     await injectSSEEvent(page, 'create', BOB_EXPENSE)
   })
 
-  await test.step('balance card re-renders with updated amount', async () => {
-    // After Bob adds 2400 cents (50% portion), viewer owes Bob ~600 cents net (relative to Groceries)
-    // The balance card should change — we verify it no longer shows the initial positive state
-    await expect(page.getByText('Pizza Night')).toBeVisible()
-    // Balance re-renders; the exact value depends on split ratios — just verify the card updated
-    const balanceEl = page.locator('.balance-amount')
-    await expect(balanceEl).toBeVisible()
+  await test.step('balance aria-label reflects the updated computed amount', async () => {
+    await expect(page.locator('.balance-amount')).not.toHaveAttribute('aria-label', initialAriaLabel)
   })
 })
 
@@ -116,7 +114,7 @@ test('expense disappears from list after SSE delete event', async ({ page }) => 
   })
 
   await test.step('inject SSE delete event for the existing expense', async () => {
-    await injectSSEEvent(page, 'delete', { id: EXISTING_EXPENSE.id })
+    await injectSSEEvent(page, 'delete', EXISTING_EXPENSE)
   })
 
   await test.step('Groceries is removed and empty state appears', async () => {
