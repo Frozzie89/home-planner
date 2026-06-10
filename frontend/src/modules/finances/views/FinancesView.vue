@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useFinancesStore } from '@/modules/finances/stores/finances'
 import { useHouseholdStore } from '@/modules/household/stores/household'
 import { useAuthStore } from '@/shared/stores/auth'
+import { pb } from '@/shared/lib/pocketbase'
 import BalanceCard from '@/modules/finances/components/BalanceCard.vue'
 import AddExpenseSheet from '@/modules/finances/components/AddExpenseSheet.vue'
 import ExpenseList from '@/modules/finances/components/ExpenseList.vue'
@@ -10,13 +11,29 @@ import EditExpenseSheet from '@/modules/finances/components/EditExpenseSheet.vue
 import BottomSheet from '@/shared/components/BottomSheet.vue'
 import Skeleton from 'primevue/skeleton'
 import type { Expense, NewExpensePayload, UpdateExpensePayload } from '@/modules/finances/types'
+import type { RecordSubscription } from 'pocketbase'
 
 const financesStore = useFinancesStore()
 const householdStore = useHouseholdStore()
 const authStore = useAuthStore()
 
+function handleSSEEvent(event: RecordSubscription<Expense>) {
+  financesStore.applySSEEvent(event.action as 'create' | 'update' | 'delete', event.record)
+}
+
 onMounted(() => {
   financesStore.load()
+  if (authStore.householdId) {
+    void pb.collection('expenses').subscribe<Expense>(
+      '*',
+      handleSSEEvent,
+      { filter: `household_id = "${authStore.householdId}"` },
+    )
+  }
+})
+
+onUnmounted(() => {
+  pb.collection('expenses').unsubscribe()
 })
 
 const memberMap = computed(() => {

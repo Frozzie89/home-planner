@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import BalanceCard from './BalanceCard.vue'
 import type { Balance } from '@/modules/finances/types'
@@ -181,5 +182,82 @@ describe('BalanceCard', () => {
     const amountText = wrapper.find('.balance-amount').text()
     expect(amountText).toContain('100')
     expect(amountText).toContain('50')
+  })
+})
+
+describe('animated display amount', () => {
+  it('initializes displayedAmount from the initial balance prop', () => {
+    const wrapper = mount(BalanceCard, {
+      props: {
+        balance: makeBalance(5000),
+        otherMember: makeMember(),
+        currency: 'EUR',
+      },
+    })
+    // 5000 cents = 50€ — rendered amount should reflect initial prop
+    expect(wrapper.find('.balance-amount').text()).toContain('50')
+  })
+
+  it('updates displayedAmount immediately when prefers-reduced-motion: reduce is active', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })))
+
+    const wrapper = mount(BalanceCard, {
+      props: {
+        balance: makeBalance(5000),
+        otherMember: makeMember(),
+        currency: 'EUR',
+      },
+    })
+
+    await wrapper.setProps({ balance: makeBalance(8000) })
+    await nextTick()
+
+    // No rAF delay — displayedAmount jumps directly to 8000 cents = 80€
+    expect(wrapper.find('.balance-amount').text()).toContain('80')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('cancels any pending rAF in onBeforeUnmount', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({
+      matches: false,
+      media: '',
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })))
+
+    const cancelSpy = vi.spyOn(window, 'cancelAnimationFrame')
+
+    const wrapper = mount(BalanceCard, {
+      props: {
+        balance: makeBalance(5000),
+        otherMember: makeMember(),
+        currency: 'EUR',
+      },
+    })
+
+    // Trigger animation path (reduced motion is false so rAF is scheduled)
+    await wrapper.setProps({ balance: makeBalance(9000) })
+    await nextTick()
+
+    wrapper.unmount()
+
+    expect(cancelSpy).toHaveBeenCalled()
+
+    cancelSpy.mockRestore()
+    vi.unstubAllGlobals()
   })
 })
