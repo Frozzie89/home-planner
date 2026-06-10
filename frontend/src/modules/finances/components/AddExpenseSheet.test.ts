@@ -154,6 +154,12 @@ describe('AddExpenseSheet', () => {
     expect(payload.date).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}Z$/)
   })
 
+  it('amount InputNumber has max prop of 999999.99', () => {
+    const wrapper = mountSheet()
+    const amountInputNumber = wrapper.findAllComponents({ name: 'InputNumber' })[0]!
+    expect(amountInputNumber.props('max')).toBe(999999.99)
+  })
+
   it('resets form state when open changes from true to false', async () => {
     const wrapper = mountSheet()
     await wrapper.find('#expense-title').setValue('Some title')

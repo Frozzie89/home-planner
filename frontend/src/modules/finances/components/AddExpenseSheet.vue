@@ -93,6 +93,7 @@ watch(open, (isOpen) => {
         mode="currency"
         :currency="currency"
         :locale="getCurrencyLocale(currency)"
+        :max="999999.99"
         :max-fraction-digits="2"
         :min-fraction-digits="2"
         @blur="amountTouched = true"
