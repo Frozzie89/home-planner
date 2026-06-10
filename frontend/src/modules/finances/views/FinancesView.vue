@@ -9,8 +9,11 @@ import AddExpenseSheet from '@/modules/finances/components/AddExpenseSheet.vue'
 import ExpenseList from '@/modules/finances/components/ExpenseList.vue'
 import EditExpenseSheet from '@/modules/finances/components/EditExpenseSheet.vue'
 import BottomSheet from '@/shared/components/BottomSheet.vue'
+import SettleUpCard from '@/modules/finances/components/SettleUpCard.vue'
+import SettleCelebration from '@/modules/finances/components/SettleCelebration.vue'
 import Skeleton from 'primevue/skeleton'
-import type { Expense, NewExpensePayload, UpdateExpensePayload } from '@/modules/finances/types'
+import { getMemberName } from '@/shared/lib/memberHelpers'
+import type { Expense, NewExpensePayload, UpdateExpensePayload, Balance } from '@/modules/finances/types'
 import type { RecordSubscription } from 'pocketbase'
 
 const financesStore = useFinancesStore()
@@ -92,6 +95,32 @@ async function confirmDelete() {
   await financesStore.deleteExpense(deletingExpense.value.id)
   deletingExpense.value = null
 }
+
+// ── Settle-up handlers ───────────────────────────────────────────────────────
+
+const showSettleConfirm = ref(false)
+const settlingBalance = ref<Balance | null>(null)
+
+const settlingMemberName = computed(() => {
+  if (!settlingBalance.value) return ''
+  const m = memberMap.value.get(settlingBalance.value.member_b_id)
+  return m ? getMemberName(m) : ''
+})
+
+function openSettleConfirm(balance: Balance) {
+  settlingBalance.value = balance
+  showSettleConfirm.value = true
+}
+
+function handleSettleConfirm() {
+  if (!settlingBalance.value) return
+  showSettleConfirm.value = false
+  financesStore.settleUp({
+    member_a_id: settlingBalance.value.member_a_id,
+    member_b_id: settlingBalance.value.member_b_id,
+  })
+  settlingBalance.value = null
+}
 </script>
 
 <template>
@@ -126,6 +155,21 @@ async function confirmDelete() {
     </div>
   </BottomSheet>
 
+  <!-- Settle-up confirmation sheet -->
+  <BottomSheet v-model:open="showSettleConfirm" title="Settle Up">
+    <p class="settle-confirm-text">
+      Confirm you've settled the balance with {{ settlingMemberName }}?
+    </p>
+    <div class="delete-confirm-actions">
+      <button type="button" class="btn-cancel" @click="showSettleConfirm = false">
+        Cancel
+      </button>
+      <button type="button" class="btn-settle" @click="handleSettleConfirm">
+        Confirm
+      </button>
+    </div>
+  </BottomSheet>
+
   <div class="finances-page">
     <!-- Desktop: page header with + Add expense button -->
     <div class="page-header">
@@ -153,9 +197,31 @@ async function confirmDelete() {
           :balance="balance"
           :other-member="memberMap.get(balance.member_b_id)!"
           :currency="householdStore.currency"
-          :settled="false"
+          :settled="financesStore.isSettledPair(balance.member_b_id)"
           :has-expenses="financesStore.expenses.length > 0"
           :header-label="isSinglePair ? 'YOUR BALANCE' : undefined"
+        />
+        <Transition name="settle-card">
+          <SettleUpCard
+            v-if="balance.amount !== 0 && memberMap.get(balance.member_b_id)"
+            :balance="balance"
+            :other-member="memberMap.get(balance.member_b_id)!"
+            :currency="householdStore.currency"
+            @settle-up="openSettleConfirm(balance)"
+          />
+        </Transition>
+        <Transition name="settled-pill">
+          <div
+            v-if="financesStore.isSettledPair(balance.member_b_id)"
+            class="settled-pill"
+          >
+            ✓ Settled
+          </div>
+        </Transition>
+        <SettleCelebration
+          v-if="memberMap.get(balance.member_b_id)"
+          :active="financesStore.isSettledPair(balance.member_b_id)"
+          :other-member-name="getMemberName(memberMap.get(balance.member_b_id)!)"
         />
       </template>
       <template v-if="financesStore.bilateralBalances.length === 0">
@@ -329,6 +395,64 @@ async function confirmDelete() {
 
 .btn-delete:hover,
 .btn-cancel:hover {
+  opacity: 0.9;
+}
+
+/* SettleUpCard fade-out */
+.settle-card-leave-active {
+  transition: opacity 200ms ease-out;
+}
+.settle-card-leave-to {
+  opacity: 0;
+}
+
+/* Settled pill — below BalanceCard */
+.settled-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 4px var(--space-2);
+  border: 1px solid var(--color-balance-positive, #4A9068);
+  border-radius: 20px;
+  color: var(--color-balance-positive, #4A9068);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: transparent;
+}
+
+/* Settled pill fade-in — 500ms delay so it appears after the card bg transition */
+.settled-pill-enter-active {
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity 200ms ease-out 500ms;
+  }
+}
+.settled-pill-enter-from {
+  @media (prefers-reduced-motion: no-preference) {
+    opacity: 0;
+  }
+}
+
+.settle-confirm-text {
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.btn-settle {
+  flex: 1;
+  min-height: 48px;
+  background-color: var(--color-accent, #D4845A);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-settle:hover {
   opacity: 0.9;
 }
 

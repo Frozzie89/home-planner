@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { ref } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import FinancesView from './FinancesView.vue'
 import type { Expense } from '@/modules/finances/types'
@@ -9,11 +10,15 @@ const {
   mockUnsubscribe,
   mockApplySSEEvent,
   mockLoad,
+  mockSettleUp,
+  mockIsSettledPair,
 } = vi.hoisted(() => ({
   mockSubscribe: vi.fn().mockResolvedValue(() => Promise.resolve()),
   mockUnsubscribe: vi.fn().mockResolvedValue(undefined),
   mockApplySSEEvent: vi.fn(),
   mockLoad: vi.fn(),
+  mockSettleUp: vi.fn(),
+  mockIsSettledPair: vi.fn().mockReturnValue(false),
 }))
 
 vi.mock('@/shared/lib/pocketbase', () => ({
@@ -36,6 +41,9 @@ vi.mock('@/modules/finances/stores/finances', () => ({
     addExpenseStatus: 'idle',
     updateExpenseStatus: 'idle',
     deleteExpenseStatus: 'idle',
+    settleUp: mockSettleUp,
+    isSettledPair: mockIsSettledPair,
+    settledPairs: ref(new Set()),
   })),
 }))
 
@@ -65,6 +73,8 @@ function mountView() {
         EditExpenseSheet: true,
         BottomSheet: true,
         Skeleton: true,
+        SettleUpCard: true,
+        SettleCelebration: true,
       },
     },
   })
