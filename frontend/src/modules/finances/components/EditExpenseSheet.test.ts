@@ -156,6 +156,12 @@ describe('EditExpenseSheet', () => {
     expect(btn.text()).toBe('Save Changes')
   })
 
+  it('amount InputNumber has max prop of 999999.99', () => {
+    const wrapper = mountSheet()
+    const amountInputNumber = wrapper.findAllComponents({ name: 'InputNumber' })[0]!
+    expect(amountInputNumber.props('max')).toBe(999999.99)
+  })
+
   it('resets to expense prop values when closed and reopened', async () => {
     const wrapper = mountSheet({ title: 'Groceries', amount: 4580 })
     // Change title
