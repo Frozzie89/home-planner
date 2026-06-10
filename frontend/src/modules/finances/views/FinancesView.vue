@@ -399,11 +399,13 @@ function handleSettleConfirm() {
 }
 
 /* SettleUpCard fade-out */
-.settle-card-leave-active {
-  transition: opacity 200ms ease-out;
-}
-.settle-card-leave-to {
-  opacity: 0;
+@media (prefers-reduced-motion: no-preference) {
+  .settle-card-leave-active {
+    transition: opacity 200ms ease-out;
+  }
+  .settle-card-leave-to {
+    opacity: 0;
+  }
 }
 
 /* Settled pill — below BalanceCard */
