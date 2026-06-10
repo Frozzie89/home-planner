@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { pb } from '@/shared/lib/pocketbase'
 import { useAuthStore } from '@/shared/stores/auth'
 import { useHouseholdStore } from '@/modules/household/stores/household'
-import type { Expense, Balance, NewExpensePayload, UpdateExpensePayload } from '@/modules/finances/types'
+import type { Expense, Balance, NewExpensePayload, UpdateExpensePayload, SettleUpPayload } from '@/modules/finances/types'
 import type { MemberRecord } from '@/modules/household/types'
 
 const byDateDesc = (a: Expense, b: Expense) =>
@@ -17,6 +17,7 @@ export const useFinancesStore = defineStore('finances', () => {
   const addExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
   const updateExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
   const deleteExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+  const settledPairs = ref<Set<string>>(new Set())
 
   watch(() => authStore.isAuthenticated, (isAuth) => {
     if (!isAuth) reset()
@@ -63,7 +64,9 @@ export const useFinancesStore = defineStore('finances', () => {
         // Expenses by a third-party member do not affect this bilateral pair
       }
 
-      return { member_a_id: viewerMemberId, member_b_id: other.id, amount: balance }
+      const key = `${viewerMemberId}:${other.id}`
+      const settled = settledPairs.value.has(key)
+      return { member_a_id: viewerMemberId, member_b_id: other.id, amount: settled ? 0 : balance }
     })
   })
 
@@ -101,6 +104,7 @@ export const useFinancesStore = defineStore('finances', () => {
   }
 
   async function addExpense(payload: NewExpensePayload) {
+    settledPairs.value = new Set()
     if (!authStore.householdId || !authStore.memberId) return
     if (loadStatus.value !== 'success') return
     if (addExpenseStatus.value === 'loading') return
@@ -226,6 +230,7 @@ export const useFinancesStore = defineStore('finances', () => {
 
   function applySSEEvent(action: 'create' | 'update' | 'delete', record: Expense) {
     if (action === 'create') {
+      settledPairs.value = new Set()
       const idx = expenses.value.findIndex(e => e.id === record.id)
       if (idx >= 0) {
         const synced = [...expenses.value]
@@ -250,6 +255,19 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  function settleUp(payload: SettleUpPayload) {
+    const key = `${payload.member_a_id}:${payload.member_b_id}`
+    const updated = new Set(settledPairs.value)
+    updated.add(key)
+    settledPairs.value = updated
+  }
+
+  function isSettledPair(memberBId: string): boolean {
+    const viewerMemberId = authStore.memberId
+    if (!viewerMemberId) return false
+    return settledPairs.value.has(`${viewerMemberId}:${memberBId}`)
+  }
+
   function reset() {
     expenses.value = []
     members.value = []
@@ -257,6 +275,7 @@ export const useFinancesStore = defineStore('finances', () => {
     addExpenseStatus.value = 'idle'
     updateExpenseStatus.value = 'idle'
     deleteExpenseStatus.value = 'idle'
+    settledPairs.value = new Set()
   }
 
   return {
@@ -265,5 +284,6 @@ export const useFinancesStore = defineStore('finances', () => {
     updateExpenseStatus, updateExpense,
     deleteExpenseStatus, deleteExpense,
     applySSEEvent,
+    settledPairs, settleUp, isSettledPair,
   }
 })
