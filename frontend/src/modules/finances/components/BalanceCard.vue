@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { getMemberName } from '@/shared/lib/memberHelpers'
 import { getCurrencyLocale } from '@/shared/lib/currencyHelpers'
 import type { Balance } from '@/modules/finances/types'
@@ -20,6 +20,46 @@ const isZero = computed(() => props.balance.amount === 0)
 const isZeroFresh = computed(() => isZero.value && !props.settled && !props.hasExpenses)
 const isZeroSettled = computed(() => isZero.value && props.settled)
 
+// ── Animated display amount ───────────────────────────────────────────────────
+
+const displayedAmount = ref(props.balance.amount)
+let rafId: number | null = null
+
+watch(() => props.balance.amount, (newVal) => {
+  if (typeof window === 'undefined') {
+    displayedAmount.value = newVal
+    return
+  }
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    displayedAmount.value = newVal
+    return
+  }
+
+  const from = displayedAmount.value
+  const to = newVal
+  const start = performance.now()
+  const duration = 300
+
+  function step(now: number) {
+    const t = Math.min((now - start) / duration, 1)
+    const eased = 1 - Math.pow(1 - t, 2) // ease-out quadratic
+    displayedAmount.value = Math.round(from + (to - from) * eased)
+    if (t < 1) {
+      rafId = requestAnimationFrame(step)
+    } else {
+      displayedAmount.value = to
+      rafId = null
+    }
+  }
+
+  if (rafId !== null) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(step)
+})
+
+onBeforeUnmount(() => {
+  if (rafId !== null) cancelAnimationFrame(rafId)
+})
+
 const otherName = computed(() => getMemberName(props.otherMember))
 
 const header = computed(() =>
@@ -29,6 +69,7 @@ const header = computed(() =>
 // Split amount into prefix (leading currency/literal), intPart (integer+groups),
 // frac (decimal separator + fraction digits), and suffix (trailing currency/literal).
 // This handles all locale orderings: "€45.80", "45.80 €", "CHF 45.80", "45.80 CHF".
+// Uses displayedAmount.value for the animated integer; sign/color use props.balance.amount.
 const amountParts = computed(() => {
   const fmt = new Intl.NumberFormat(getCurrencyLocale(props.currency), {
     style: 'currency',
@@ -37,7 +78,7 @@ const amountParts = computed(() => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
-  const parts = fmt.formatToParts(Math.abs(props.balance.amount) / 100)
+  const parts = fmt.formatToParts(Math.abs(displayedAmount.value) / 100)
   let prefix = ''   // leading currency + literals (before integer)
   let intPart = ''  // integer digits + group separators
   let frac = ''     // decimal separator + fraction digits
@@ -61,14 +102,23 @@ const amountParts = computed(() => {
     }
   }
 
+  // Sign and color use the real (non-animated) amount — never flip mid-animation
   const sign = isPositive.value ? '+' : isNegative.value ? '−' : '' // U+2212 minus sign
   return { sign, prefix, intPart, frac, suffix }
 })
 
-// Full formatted string used only for aria-label
+// aria-label uses the real (non-animated) amount for correctness
 const formattedAmount = computed(() => {
-  const { sign, prefix, intPart, frac, suffix } = amountParts.value
-  return `${sign}${prefix}${intPart}${frac}${suffix}`
+  const fmt = new Intl.NumberFormat(getCurrencyLocale(props.currency), {
+    style: 'currency',
+    currency: props.currency,
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  const abs = fmt.format(Math.abs(props.balance.amount) / 100)
+  const sign = isPositive.value ? '+' : isNegative.value ? '−' : ''
+  return `${sign}${abs}`
 })
 
 const sublabel = computed(() => {
@@ -138,8 +188,7 @@ const amountClass = computed(() => ({
   font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
   display: flex;
-  align-items: baseline; /* decimal aligns to same baseline as integer */
-  /* Story 3.4 will add a full count-up/down animation via SSE; for now a color transition */
+  align-items: baseline;
   @media (prefers-reduced-motion: no-preference) {
     transition: color 300ms ease-out;
   }
