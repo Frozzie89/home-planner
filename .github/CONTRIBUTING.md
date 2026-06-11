@@ -6,6 +6,10 @@ Thank you for your interest in Home Planner.
 
 That said, bug reports and feature requests are genuinely welcome. Opening an issue is the best way to contribute right now.
 
+### For external contributors
+
+If you want to submit code, **fork the repository** and open a pull request targeting the `dev` branch of this repo. Direct pushes to `dev` or `main` are not available to non-maintainers. Pull requests to `main` from non-maintainers will not be accepted - `main` is a release-only branch managed by code owners.
+
 ---
 
 ## Reporting bugs
@@ -33,8 +37,10 @@ When this project opens up to contributions, the following will apply.
 
 ### Branching
 
-- Branch from `main`
+- Branch from `dev`
 - Name branches: `feat/short-description`, `fix/short-description`
+- `dev` is the integration branch - all feature work merges here
+- `main` is release-only; merges to `main` require code owner approval (see [CODEOWNERS](.github/CODEOWNERS)) and are only done to cut a release
 
 ### Commits
 
