@@ -1,18 +1,12 @@
 ## Summary
 
-<!-- What does this PR do? One or two sentences. -->
+<!-- What does this PR do? A short paragraph. -->
 
 Closes #<!-- issue number -->
 
 ## Changes
 
 <!-- Bullet list of what changed and why. -->
-
-## Test plan
-
-- [ ] Unit tests pass (`npm run test`)
-- [ ] E2E tests pass (`npm run test:e2e`)
-- [ ] Tested manually in browser
 
 ## Screenshots
 

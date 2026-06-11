@@ -20,19 +20,17 @@ Built for personal use, with a focus on being lightweight, easy to use, and self
 
 ## Requirements
 
-| Tool | Version |
-|------|---------|
-| Docker | 24+ |
-| Docker Compose | v2 |
-
-For local development without Docker: Node.js 20+ and a PocketBase binary.
+| Tool | Version | Context |
+|------|---------|---------|
+| Docker | 24+ | Docker setup only |
+| Docker Compose | v2 | Docker setup only |
+| Node.js | 20+ | Local dev only |
+| PocketBase | latest | Local dev only |
 
 
 ## Quick start (Docker)
 
 ```sh
-git clone <repo-url>
-cd home-planner
 cp .env.example .env
 # Edit .env et set environment keys
 docker compose up -d
@@ -44,13 +42,7 @@ On first load you will be prompted to configure an OAuth2 provider in PocketBase
 
 ### Environment variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `FRONTEND_HOST` | `home-planner.localhost` | Hostname for the Vue frontend |
-| `POCKETBASE_HOST` | `pb.home-planner.localhost` | Hostname for the PocketBase API |
-
-The frontend also has its own `frontend/.env.example` with `VITE_PB_URL`.
-
+Copy `.env.example` to `.env` and adjust as needed. The frontend has its own `frontend/.env.example`.
 
 ## Local development
 
@@ -83,8 +75,6 @@ npm run test:e2e      # Playwright smoke tests
 | Frontend | Vue 3, Vite, TypeScript, Pinia, PrimeVue |
 | Backend | PocketBase 0.27 (embedded SQLite + auth + realtime) |
 | Reverse proxy | Traefik v3 |
-| Frontend server | Nginx (inside Docker) |
-| CI | GitHub Actions |
 
 
 ## Contributing
