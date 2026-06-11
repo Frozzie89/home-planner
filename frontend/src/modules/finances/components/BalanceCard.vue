@@ -167,7 +167,7 @@ const amountClass = computed(() => ({
   background-color: var(--p-surface-card);
   border: 1px solid var(--p-surface-border);
   border-radius: 10px;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3);
   display: flex;
   align-items: center;
   justify-content: space-between;
