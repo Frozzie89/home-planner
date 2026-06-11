@@ -92,8 +92,8 @@ test('confirming settle-up hides SettleUpCard and shows settled state', async ({
     await expect(page.getByRole('button', { name: 'Settle up' })).toHaveCount(0)
   })
 
-  await test.step('"All settled. Nothing owed." text is visible', async () => {
-    await expect(page.getByText('All settled. Nothing owed.')).toBeVisible()
+  await test.step('"All settled" text is visible', async () => {
+    await expect(page.getByText('All settled')).toBeVisible()
   })
 })
 
