@@ -27,6 +27,13 @@ Built for personal use, with a focus on being lightweight, easy to use, and self
 | Node.js | 20+ | Local dev only |
 | PocketBase | latest | Local dev only |
 
+## Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vue 3, Vite, TypeScript, Pinia, PrimeVue |
+| Backend | PocketBase 0.27 (embedded SQLite + auth + realtime) |
+| Reverse proxy | Traefik v3 |
 
 ## Quick start (Docker)
 
@@ -67,21 +74,6 @@ npm run test          # Vitest unit tests
 npm run test:e2e      # Playwright smoke tests
 ```
 
-
-## Tech stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Vue 3, Vite, TypeScript, Pinia, PrimeVue |
-| Backend | PocketBase 0.27 (embedded SQLite + auth + realtime) |
-| Reverse proxy | Traefik v3 |
-
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The project is not yet actively seeking pull requests, but bug reports and feature requests are welcome via [GitHub Issues](../../issues).
-
-
-## License
-
-[GNU Affero General Public License v3.0](LICENSE)
