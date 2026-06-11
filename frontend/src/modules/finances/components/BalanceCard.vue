@@ -219,7 +219,7 @@ const amountClass = computed(() => ({
 }
 
 .slim-dir.dir-settled {
-  color: var(--color-balance-positive, #4A9068);
+  color: #2d6b4a;
   font-weight: 500;
 }
 
@@ -257,9 +257,9 @@ const amountClass = computed(() => ({
   flex-shrink: 0;
   min-height: 36px;
   padding: 0 var(--space-2);
-  background-color: var(--color-accent, #D4845A);
-  color: white;
-  border: none;
+  background-color: transparent;
+  color: #9B4E2A;
+  border: 2px solid var(--color-accent, #D4845A);
   border-radius: 20px;
   font-size: 0.8125rem;
   font-weight: 600;
