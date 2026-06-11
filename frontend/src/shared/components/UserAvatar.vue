@@ -1,49 +1,54 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
-import { pb } from '@/shared/lib/pocketbase'
+import { ref, computed, onUnmounted } from 'vue';
+import { pb } from '@/shared/lib/pocketbase';
 
 interface UserRecord {
-  id: string
-  name?: string
-  username?: string
-  email?: string
-  avatar?: string
+  id: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  avatar?: string;
 }
 
-const props = withDefaults(defineProps<{
-  size?: number
-  userRecord?: UserRecord | null
-}>(), { size: 32 })
+const props = withDefaults(
+  defineProps<{
+    size?: number;
+    userRecord?: UserRecord | null;
+  }>(),
+  { size: 32 }
+);
 
-const AVATAR_COLORS = ['#c0705a', '#5a7dc0', '#5ac07d', '#c09f5a', '#9b5ac0']
+const AVATAR_COLORS = ['#c0705a', '#5a7dc0', '#5ac07d', '#c09f5a', '#9b5ac0'];
 
-const authRecord = ref(pb.authStore.record)
-const unsub = pb.authStore.onChange((_token, model) => { authRecord.value = model })
-onUnmounted(unsub)
+const authRecord = ref(pb.authStore.record);
+const unsub = pb.authStore.onChange((_token, model) => {
+  authRecord.value = model;
+});
+onUnmounted(unsub);
 
-const activeRecord = computed<UserRecord | null>(() =>
-  props.userRecord ?? (authRecord.value as UserRecord | null)
-)
+const activeRecord = computed<UserRecord | null>(
+  () => props.userRecord ?? (authRecord.value as UserRecord | null)
+);
 
 const avatarUrl = computed(() => {
-  const r = activeRecord.value
-  if (!r?.avatar) return null
-  return pb.files.getURL(r as any, r.avatar)
-})
+  const r = activeRecord.value;
+  if (!r?.avatar) return null;
+  return pb.files.getURL(r as any, r.avatar);
+});
 
 const initial = computed(() => {
-  const r = activeRecord.value
-  const name = (r?.name || r?.username || r?.email || '?')
-  return name.charAt(0).toUpperCase()
-})
+  const r = activeRecord.value;
+  const name = r?.name || r?.username || r?.email || '?';
+  return name.charAt(0).toUpperCase();
+});
 
 const bgColor = computed(() => {
-  const id = activeRecord.value?.id ?? ''
-  const sum = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
-  return AVATAR_COLORS[sum % AVATAR_COLORS.length] ?? AVATAR_COLORS[0]!
-})
+  const id = activeRecord.value?.id ?? '';
+  const sum = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length] ?? AVATAR_COLORS[0]!;
+});
 
-const fontSize = computed(() => `${Math.round(props.size * 0.4375)}px`)
+const fontSize = computed(() => `${Math.round(props.size * 0.4375)}px`);
 </script>
 
 <template>
@@ -60,7 +65,8 @@ const fontSize = computed(() => `${Math.round(props.size * 0.4375)}px`)
     class="avatar-initial"
     :style="{ backgroundColor: bgColor, width: `${size}px`, height: `${size}px`, fontSize }"
     aria-hidden="true"
-  >{{ initial }}</span>
+    >{{ initial }}</span
+  >
 </template>
 
 <style scoped>

@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Page } from '@playwright/test';
 
 // Fake JWT: header.payload.signature
 // Payload decodes to: {"id":"smoke-user-id","exp":4102444800} (exp = year 2100)
@@ -6,26 +6,26 @@ export const FAKE_TOKEN = [
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
   'eyJpZCI6InNtb2tlLXVzZXItaWQiLCJleHAiOjQxMDI0NDQ4MDB9',
   'smoke-test-fake-signature',
-].join('.')
+].join('.');
 
-export const MOCK_USER_ID = 'smoke-user-id'
-export const MOCK_HOUSEHOLD_ID = 'smoke-household-id'
-export const MOCK_MEMBER_ID = 'smoke-member-id'
+export const MOCK_USER_ID = 'smoke-user-id';
+export const MOCK_HOUSEHOLD_ID = 'smoke-household-id';
+export const MOCK_MEMBER_ID = 'smoke-member-id';
 
-const PB_URL = 'http://pb.home-planner.localhost'
+const PB_URL = 'http://pb.home-planner.localhost';
 
 // householdId routing is controlled by mockMembersApi (404 = no household), not by localStorage
 export async function injectAuth(page: Page, options: { householdId?: string | null } = {}) {
-  void options
+  void options;
   await page.addInitScript(
     ({ token, uid }) => {
       localStorage.setItem(
         'pocketbase_auth',
-        JSON.stringify({ token, model: { id: uid, email: 'smoke@test.local' } }),
-      )
+        JSON.stringify({ token, model: { id: uid, email: 'smoke@test.local' } })
+      );
     },
-    { token: FAKE_TOKEN, uid: MOCK_USER_ID },
-  )
+    { token: FAKE_TOKEN, uid: MOCK_USER_ID }
+  );
 }
 
 // Mock the members lookup that authStore.init() makes.
@@ -53,37 +53,41 @@ export async function mockMembersApi(page: Page, respondWithMember: boolean) {
             },
           ],
         }),
-      })
+      });
     } else {
       // 404 -> loadMembership() sets householdId = null -> router allows /setup
       route.fulfill({
         status: 404,
         contentType: 'application/json',
-        body: JSON.stringify({ code: 404, message: "The requested resource wasn't found.", data: {} }),
-      })
+        body: JSON.stringify({
+          code: 404,
+          message: "The requested resource wasn't found.",
+          data: {},
+        }),
+      });
     }
-  })
+  });
 }
 
 // Catch-all: abort any PocketBase request not explicitly mocked above.
 // Aborting (rather than fulfilling with {}) makes mock gaps fail loudly in both
 // CI and local dev, preventing silent fallthrough to a real running PocketBase.
 export async function mockRemainingPbCalls(page: Page) {
-  await page.route(`${PB_URL}/**`, (route) => route.abort())
+  await page.route(`${PB_URL}/**`, (route) => route.abort());
 }
 
 // ─── Epic 3 helpers ──────────────────────────────────────────────────────────
 
 export interface MockExpense {
-  id: string
-  household_id: string
-  member_id: string
-  title: string
-  amount: number   // integer cents
-  portion: number  // integer percentage
-  date: string
-  created: string
-  updated: string
+  id: string;
+  household_id: string;
+  member_id: string;
+  title: string;
+  amount: number; // integer cents
+  portion: number; // integer percentage
+  date: string;
+  created: string;
+  updated: string;
 }
 
 export async function mockExpensesApi(page: Page, expenses: MockExpense[] = []) {
@@ -98,8 +102,8 @@ export async function mockExpensesApi(page: Page, expenses: MockExpense[] = []) 
         totalPages: expenses.length === 0 ? 0 : 1,
         items: expenses,
       }),
-    }),
-  )
+    })
+  );
 }
 
 // Mock POST /api/collections/expenses/records (create expense).
@@ -108,42 +112,42 @@ export async function mockExpensesApi(page: Page, expenses: MockExpense[] = []) 
 export async function mockExpensesCreateApi(
   page: Page,
   createdExpense: MockExpense,
-  options: { failWithStatus?: number } = {},
+  options: { failWithStatus?: number } = {}
 ) {
   await page.route(`${PB_URL}/api/collections/expenses/records*`, (route) => {
     if (route.request().method() !== 'POST') {
-      route.fallback()
-      return
+      route.fallback();
+      return;
     }
     if (options.failWithStatus) {
       route.fulfill({
         status: options.failWithStatus,
         contentType: 'application/json',
         body: JSON.stringify({ code: options.failWithStatus, message: 'Server error', data: {} }),
-      })
+      });
     } else {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(createdExpense),
-      })
+      });
     }
-  })
+  });
 }
 
 // ─── Epic 2 helpers ──────────────────────────────────────────────────────────
 
-export const MOCK_MEMBER_ID_2 = 'smoke-member-id-2'
-export const MOCK_USER_ID_2 = 'smoke-user-id-2'
+export const MOCK_MEMBER_ID_2 = 'smoke-member-id-2';
+export const MOCK_USER_ID_2 = 'smoke-user-id-2';
 
 // Like mockMembersApi but returns two members with expand data, suitable for
 // both the auth store's getFirstListItem and the settings view's getFullList.
 // currentUserRole controls the role returned for MOCK_USER_ID (the logged-in user).
 export async function mockSettingsMembersApi(
   page: Page,
-  options: { currentUserRole?: 'admin' | 'member' } = {},
+  options: { currentUserRole?: 'admin' | 'member' } = {}
 ) {
-  const role = options.currentUserRole ?? 'admin'
+  const role = options.currentUserRole ?? 'admin';
   await page.route(`${PB_URL}/api/collections/members/records*`, (route) =>
     route.fulfill({
       status: 200,
@@ -190,8 +194,8 @@ export async function mockSettingsMembersApi(
           },
         ],
       }),
-    }),
-  )
+    })
+  );
 }
 
 // Mock GET /api/collections/households/records/:id — used by HouseholdSettingsView.
@@ -209,8 +213,8 @@ export async function mockHouseholdsApi(page: Page) {
         created: '2026-01-01 00:00:00.000Z',
         updated: '2026-01-01 00:00:00.000Z',
       }),
-    }),
-  )
+    })
+  );
 }
 
 // Mock PATCH /api/collections/expenses/records/:id (update expense).
@@ -219,27 +223,27 @@ export async function mockExpenseUpdateApi(
   page: Page,
   id: string,
   updatedExpense: MockExpense,
-  options: { failWithStatus?: number } = {},
+  options: { failWithStatus?: number } = {}
 ) {
   await page.route(`${PB_URL}/api/collections/expenses/records/${id}`, (route) => {
     if (route.request().method() !== 'PATCH') {
-      route.fallback()
-      return
+      route.fallback();
+      return;
     }
     if (options.failWithStatus) {
       route.fulfill({
         status: options.failWithStatus,
         contentType: 'application/json',
         body: JSON.stringify({ code: options.failWithStatus, message: 'Server error', data: {} }),
-      })
+      });
     } else {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(updatedExpense),
-      })
+      });
     }
-  })
+  });
 }
 
 // Mock DELETE /api/collections/expenses/records/:id.
@@ -247,30 +251,30 @@ export async function mockExpenseUpdateApi(
 export async function mockExpenseDeleteApi(
   page: Page,
   id: string,
-  options: { failWithStatus?: number } = {},
+  options: { failWithStatus?: number } = {}
 ) {
   await page.route(`${PB_URL}/api/collections/expenses/records/${id}`, (route) => {
     if (route.request().method() !== 'DELETE') {
-      route.fallback()
-      return
+      route.fallback();
+      return;
     }
     if (options.failWithStatus) {
       route.fulfill({
         status: options.failWithStatus,
         contentType: 'application/json',
         body: JSON.stringify({ code: options.failWithStatus, message: 'Server error', data: {} }),
-      })
+      });
     } else {
-      route.fulfill({ status: 204 })
+      route.fulfill({ status: 204 });
     }
-  })
+  });
 }
 
 // ─── Auth callback helpers ────────────────────────────────────────────────────
 
 // State token shared between injectOAuthProviderSession and callback URL params.
 // Must be the same string so handleCallback passes the state-mismatch guard.
-export const OAUTH_TEST_STATE = 'test-state-xyz'
+export const OAUTH_TEST_STATE = 'test-state-xyz';
 
 // Seeds sessionStorage before page load so AuthView.handleCallback finds the
 // provider record when it processes ?code=...&state=... query params.
@@ -279,11 +283,11 @@ export async function injectOAuthProviderSession(page: Page, state = OAUTH_TEST_
     ({ state }) => {
       sessionStorage.setItem(
         'oauth_provider',
-        JSON.stringify({ name: 'google', state, codeVerifier: 'test-verifier' }),
-      )
+        JSON.stringify({ name: 'google', state, codeVerifier: 'test-verifier' })
+      );
     },
-    { state },
-  )
+    { state }
+  );
 }
 
 // Mocks POST /api/collections/users/auth-with-oauth2 — the PocketBase SDK
@@ -298,13 +302,19 @@ export async function mockOAuth2CodeExchange(page: Page) {
         contentType: 'application/json',
         body: JSON.stringify({
           token: FAKE_TOKEN,
-          record: { id: MOCK_USER_ID, email: 'smoke@test.local', username: 'smokeuser', name: 'Smoke User', verified: true },
+          record: {
+            id: MOCK_USER_ID,
+            email: 'smoke@test.local',
+            username: 'smokeuser',
+            name: 'Smoke User',
+            verified: true,
+          },
         }),
-      })
+      });
     } else {
-      route.abort()
+      route.abort();
     }
-  })
+  });
 }
 
 // Mocks GET /api/household/exists — called by AuthView when householdId is null
@@ -315,8 +325,8 @@ export async function mockHouseholdExistsApi(page: Page, exists: boolean) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ exists }),
-    }),
-  )
+    })
+  );
 }
 
 // Mocks GET /api/collections/users/auth-methods — returns a single Google OAuth2
@@ -333,12 +343,18 @@ export async function mockAuthMethodsApi(page: Page) {
         oauth2: {
           enabled: true,
           providers: [
-            { name: 'google', displayName: 'Google', state: 'fresh-state', codeVerifier: 'fresh-verifier', authURL: 'https://accounts.google.com/o/oauth2/auth' },
+            {
+              name: 'google',
+              displayName: 'Google',
+              state: 'fresh-state',
+              codeVerifier: 'fresh-verifier',
+              authURL: 'https://accounts.google.com/o/oauth2/auth',
+            },
           ],
         },
       }),
-    }),
-  )
+    })
+  );
 }
 
 // Mock GET /api/collections/members/records/:memberId — used by ProfileView's getOne.
@@ -372,6 +388,6 @@ export async function mockProfileMemberApi(page: Page, role: 'admin' | 'member' 
         created: '2026-01-01 00:00:00.000Z',
         updated: '2026-01-01 00:00:00.000Z',
       }),
-    }),
-  )
+    })
+  );
 }

@@ -1,26 +1,25 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { MemberRecord } from '@/modules/household/types'
-import UserAvatar from '@/shared/components/UserAvatar.vue'
-import { getMemberName } from '@/shared/lib/memberHelpers'
+import { computed } from 'vue';
+import type { MemberRecord } from '@/modules/household/types';
+import UserAvatar from '@/shared/components/UserAvatar.vue';
+import { getMemberName } from '@/shared/lib/memberHelpers';
 
 const props = defineProps<{
-  members: MemberRecord[]
-  currentUserId: string
-}>()
+  members: MemberRecord[];
+  currentUserId: string;
+}>();
 
 const emit = defineEmits<{
-  remove: [member: MemberRecord]
-  promote: [member: MemberRecord]
-  demote: [member: MemberRecord]
-}>()
-
+  remove: [member: MemberRecord];
+  promote: [member: MemberRecord];
+  demote: [member: MemberRecord];
+}>();
 
 const sortedMembers = computed(() =>
   [...props.members].sort((a, b) =>
     a.user_id === props.currentUserId ? -1 : b.user_id === props.currentUserId ? 1 : 0
   )
-)
+);
 </script>
 
 <template>

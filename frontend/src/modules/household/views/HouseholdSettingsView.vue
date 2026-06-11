@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
-import Select from 'primevue/select'
-import Button from 'primevue/button'
-import Skeleton from 'primevue/skeleton'
-import Toast from 'primevue/toast'
-import { useToast } from 'primevue/usetoast'
-import { pb } from '@/shared/lib/pocketbase'
-import { useAuthStore } from '@/shared/stores/auth'
-import { useHouseholdStore } from '@/modules/household/stores/household'
-import type { Household } from '@/shared/types'
-import type { MemberRecord } from '@/modules/household/types'
-import { getMemberName } from '@/shared/lib/memberHelpers'
-import MemberList from '@/modules/household/components/MemberList.vue'
-import UserAvatar from '@/shared/components/UserAvatar.vue'
-import BottomSheet from '@/shared/components/BottomSheet.vue'
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import Select from 'primevue/select';
+import Button from 'primevue/button';
+import Skeleton from 'primevue/skeleton';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+import { pb } from '@/shared/lib/pocketbase';
+import { useAuthStore } from '@/shared/stores/auth';
+import { useHouseholdStore } from '@/modules/household/stores/household';
+import type { Household } from '@/shared/types';
+import type { MemberRecord } from '@/modules/household/types';
+import { getMemberName } from '@/shared/lib/memberHelpers';
+import MemberList from '@/modules/household/components/MemberList.vue';
+import UserAvatar from '@/shared/components/UserAvatar.vue';
+import BottomSheet from '@/shared/components/BottomSheet.vue';
 
 const CURRENCY_OPTIONS = [
   { code: 'AUD', label: 'AUD — Australian Dollar' },
@@ -31,101 +31,109 @@ const CURRENCY_OPTIONS = [
   { code: 'SEK', label: 'SEK — Swedish Krona' },
   { code: 'SGD', label: 'SGD — Singapore Dollar' },
   { code: 'USD', label: 'USD — US Dollar' },
-]
+];
 
 const REMINDER_DAY_OPTIONS = [
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-]
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
 
-const router = useRouter()
-const authStore = useAuthStore()
-const householdStore = useHouseholdStore()
-const toast = useToast()
+const router = useRouter();
+const authStore = useAuthStore();
+const householdStore = useHouseholdStore();
+const toast = useToast();
 
-const fetchStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
-const saveStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+const fetchStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
+const saveStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
 
 const formData = ref({
   name: '',
   currency: 'EUR',
   reminder_day: 'Monday',
-})
-const splitRatioForm = ref<Record<string, number>>({})
-const members = ref<MemberRecord[]>([])
+});
+const splitRatioForm = ref<Record<string, number>>({});
+const members = ref<MemberRecord[]>([]);
 const originalData = ref<{
-  name: string
-  currency: string
-  reminder_day: string
-  split_ratios: Record<string, number>
-} | null>(null)
+  name: string;
+  currency: string;
+  reminder_day: string;
+  split_ratios: Record<string, number>;
+} | null>(null);
 
-const nameError = ref('')
+const nameError = ref('');
 
 // Member management state
-const showInviteSheet = ref(false)
-const showRemoveSheet = ref(false)
-const memberToRemove = ref<MemberRecord | null>(null)
-const inviteLink = ref('')
-const inviteCopied = ref(false)
-const inviteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
-let inviteCopiedTimer: ReturnType<typeof setTimeout> | null = null
-const removeStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+const showInviteSheet = ref(false);
+const showRemoveSheet = ref(false);
+const memberToRemove = ref<MemberRecord | null>(null);
+const inviteLink = ref('');
+const inviteCopied = ref(false);
+const inviteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
+let inviteCopiedTimer: ReturnType<typeof setTimeout> | null = null;
+const removeStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
 
 // Role management state
-const showPromoteSheet = ref(false)
-const showDemoteSheet = ref(false)
-const showDeleteHouseholdSheet = ref(false)
-const memberToPromote = ref<MemberRecord | null>(null)
-const memberToDemote = ref<MemberRecord | null>(null)
-const promoteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
-const demoteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
-const deleteHouseholdStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
-const lastAdminError = ref('')
+const showPromoteSheet = ref(false);
+const showDemoteSheet = ref(false);
+const showDeleteHouseholdSheet = ref(false);
+const memberToPromote = ref<MemberRecord | null>(null);
+const memberToDemote = ref<MemberRecord | null>(null);
+const promoteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
+const demoteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
+const deleteHouseholdStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
+const lastAdminError = ref('');
 
 const splitRatioSum = computed(() =>
   Object.values(splitRatioForm.value).reduce((sum, v) => sum + (v ?? 0), 0)
-)
+);
 
-const isSplitRatioValid = computed(() => splitRatioSum.value === 100)
+const isSplitRatioValid = computed(() => splitRatioSum.value === 100);
 
 const sortedMembers = computed(() =>
   [...members.value].sort((a, b) =>
     a.user_id === authStore.userId ? -1 : b.user_id === authStore.userId ? 1 : 0
   )
-)
+);
 
-const isSingleMember = computed(() => members.value.length === 1)
-const adminCount = computed(() => members.value.filter(m => m.role === 'admin').length)
-const isSoleMember = isSingleMember
+const isSingleMember = computed(() => members.value.length === 1);
+const adminCount = computed(() => members.value.filter((m) => m.role === 'admin').length);
+const isSoleMember = isSingleMember;
 
 const hasChanges = computed(() => {
-  if (!originalData.value) return false
-  if (formData.value.name.trim() !== originalData.value.name) return true
-  if (formData.value.currency !== originalData.value.currency) return true
-  if (formData.value.reminder_day !== originalData.value.reminder_day) return true
+  if (!originalData.value) return false;
+  if (formData.value.name.trim() !== originalData.value.name) return true;
+  if (formData.value.currency !== originalData.value.currency) return true;
+  if (formData.value.reminder_day !== originalData.value.reminder_day) return true;
   for (const [memberId, ratio] of Object.entries(splitRatioForm.value)) {
-    if (originalData.value.split_ratios[memberId] !== ratio) return true
+    if (originalData.value.split_ratios[memberId] !== ratio) return true;
   }
-  return false
-})
+  return false;
+});
 
-const canSave = computed(() =>
-  hasChanges.value &&
-  isSplitRatioValid.value &&
-  formData.value.name.trim() !== '' &&
-  saveStatus.value !== 'loading'
-)
+const canSave = computed(
+  () =>
+    hasChanges.value &&
+    isSplitRatioValid.value &&
+    formData.value.name.trim() !== '' &&
+    saveStatus.value !== 'loading'
+);
 
 function validateName() {
-  nameError.value = formData.value.name.trim() === '' ? 'Household name is required' : ''
+  nameError.value = formData.value.name.trim() === '' ? 'Household name is required' : '';
 }
 
-
-
 async function loadSettings() {
-  if (fetchStatus.value === 'loading') return
-  if (!authStore.householdId) { fetchStatus.value = 'error'; return }
-  fetchStatus.value = 'loading'
+  if (fetchStatus.value === 'loading') return;
+  if (!authStore.householdId) {
+    fetchStatus.value = 'error';
+    return;
+  }
+  fetchStatus.value = 'loading';
   try {
     const [household, membersList] = await Promise.all([
       pb.collection('households').getOne<Household>(authStore.householdId),
@@ -133,219 +141,232 @@ async function loadSettings() {
         filter: `household_id = "${authStore.householdId}"`,
         expand: 'user_id',
       }),
-    ])
-    formData.value.name = household.name.trim()
-    formData.value.currency = household.currency
-    formData.value.reminder_day = household.reminder_day
-    members.value = membersList
-    const ratios = household.split_ratios ?? {}
-    splitRatioForm.value = {}
+    ]);
+    formData.value.name = household.name.trim();
+    formData.value.currency = household.currency;
+    formData.value.reminder_day = household.reminder_day;
+    members.value = membersList;
+    const ratios = household.split_ratios ?? {};
+    splitRatioForm.value = {};
     for (const member of membersList) {
-      splitRatioForm.value[member.id] = ratios[member.id] ?? 0
+      splitRatioForm.value[member.id] = ratios[member.id] ?? 0;
     }
     // Single-member: always 100 — InputNumber is disabled; DB may have 0 if never explicitly set
     if (membersList.length === 1 && membersList[0]) {
-      splitRatioForm.value[membersList[0].id] = 100
+      splitRatioForm.value[membersList[0].id] = 100;
     }
     originalData.value = {
       name: household.name.trim(),
       currency: household.currency,
       reminder_day: household.reminder_day,
       split_ratios: { ...splitRatioForm.value },
-    }
-    fetchStatus.value = 'success'
+    };
+    fetchStatus.value = 'success';
   } catch {
-    fetchStatus.value = 'error'
+    fetchStatus.value = 'error';
   }
 }
 
-onMounted(loadSettings)
+onMounted(loadSettings);
 
 // Reset saveStatus to 'idle' when the user edits the form after a save attempt
-watch([formData, splitRatioForm], () => {
-  if (saveStatus.value === 'success' || saveStatus.value === 'error') {
-    saveStatus.value = 'idle'
-  }
-}, { deep: true })
+watch(
+  [formData, splitRatioForm],
+  () => {
+    if (saveStatus.value === 'success' || saveStatus.value === 'error') {
+      saveStatus.value = 'idle';
+    }
+  },
+  { deep: true }
+);
 
 function handleRemoveMemberRequest(member: MemberRecord) {
-  lastAdminError.value = ''
+  lastAdminError.value = '';
   if (member.role === 'admin' && adminCount.value === 1) {
-    lastAdminError.value = 'At least one admin must remain in the household'
-    return
+    lastAdminError.value = 'At least one admin must remain in the household';
+    return;
   }
-  memberToRemove.value = member
-  showRemoveSheet.value = true
+  memberToRemove.value = member;
+  showRemoveSheet.value = true;
 }
 
 function closeRemoveSheet() {
-  showRemoveSheet.value = false
-  memberToRemove.value = null
-  removeStatus.value = 'idle'
+  showRemoveSheet.value = false;
+  memberToRemove.value = null;
+  removeStatus.value = 'idle';
 }
 
 async function handleRemoveConfirm() {
-  if (!memberToRemove.value || removeStatus.value === 'loading') return
-  removeStatus.value = 'loading'
+  if (!memberToRemove.value || removeStatus.value === 'loading') return;
+  removeStatus.value = 'loading';
   try {
-    await pb.collection('members').delete(memberToRemove.value.id)
-    lastAdminError.value = ''
-    closeRemoveSheet()
-    await loadSettings()
-    toast.add({ severity: 'success', summary: 'Member removed', life: 3000 })
+    await pb.collection('members').delete(memberToRemove.value.id);
+    lastAdminError.value = '';
+    closeRemoveSheet();
+    await loadSettings();
+    toast.add({ severity: 'success', summary: 'Member removed', life: 3000 });
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't remove member — try again", life: 5000 })
-    removeStatus.value = 'error'
+    toast.add({ severity: 'error', summary: "Couldn't remove member — try again", life: 5000 });
+    removeStatus.value = 'error';
   }
 }
 
 function closePromoteSheet() {
-  showPromoteSheet.value = false
-  memberToPromote.value = null
-  promoteStatus.value = 'idle'
+  showPromoteSheet.value = false;
+  memberToPromote.value = null;
+  promoteStatus.value = 'idle';
 }
 
 function handlePromoteRequest(member: MemberRecord) {
-  memberToPromote.value = member
-  showPromoteSheet.value = true
+  memberToPromote.value = member;
+  showPromoteSheet.value = true;
 }
 
 async function handlePromoteConfirm() {
-  if (!memberToPromote.value || promoteStatus.value === 'loading') return
-  promoteStatus.value = 'loading'
+  if (!memberToPromote.value || promoteStatus.value === 'loading') return;
+  promoteStatus.value = 'loading';
   try {
-    await pb.collection('members').update(memberToPromote.value.id, { role: 'admin' })
-    lastAdminError.value = ''
-    closePromoteSheet()
-    await loadSettings()
-    toast.add({ severity: 'success', summary: 'Member promoted to Admin', life: 3000 })
+    await pb.collection('members').update(memberToPromote.value.id, { role: 'admin' });
+    lastAdminError.value = '';
+    closePromoteSheet();
+    await loadSettings();
+    toast.add({ severity: 'success', summary: 'Member promoted to Admin', life: 3000 });
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't promote member — try again", life: 5000 })
-    promoteStatus.value = 'error'
+    toast.add({ severity: 'error', summary: "Couldn't promote member — try again", life: 5000 });
+    promoteStatus.value = 'error';
   }
 }
 
 function closeDemoteSheet() {
-  showDemoteSheet.value = false
-  memberToDemote.value = null
-  demoteStatus.value = 'idle'
+  showDemoteSheet.value = false;
+  memberToDemote.value = null;
+  demoteStatus.value = 'idle';
 }
 
 function handleDemoteRequest(member: MemberRecord) {
-  lastAdminError.value = ''
+  lastAdminError.value = '';
   if (member.user_id === authStore.userId && adminCount.value === 1) {
-    lastAdminError.value = 'At least one admin must remain in the household'
-    return
+    lastAdminError.value = 'At least one admin must remain in the household';
+    return;
   }
-  memberToDemote.value = member
-  showDemoteSheet.value = true
+  memberToDemote.value = member;
+  showDemoteSheet.value = true;
 }
 
 async function handleDemoteConfirm() {
-  if (!memberToDemote.value || demoteStatus.value === 'loading') return
-  demoteStatus.value = 'loading'
+  if (!memberToDemote.value || demoteStatus.value === 'loading') return;
+  demoteStatus.value = 'loading';
   try {
-    const isSelf = memberToDemote.value.user_id === authStore.userId
-    await pb.collection('members').update(memberToDemote.value.id, { role: 'member' })
-    closeDemoteSheet()
-    await loadSettings()
-    toast.add({ severity: 'success', summary: 'Admin demoted to Member', life: 3000 })
+    const isSelf = memberToDemote.value.user_id === authStore.userId;
+    await pb.collection('members').update(memberToDemote.value.id, { role: 'member' });
+    closeDemoteSheet();
+    await loadSettings();
+    toast.add({ severity: 'success', summary: 'Admin demoted to Member', life: 3000 });
     if (isSelf) {
-      await authStore.loadMembership()
+      await authStore.loadMembership();
     }
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't demote admin — try again", life: 5000 })
-    demoteStatus.value = 'error'
+    toast.add({ severity: 'error', summary: "Couldn't demote admin — try again", life: 5000 });
+    demoteStatus.value = 'error';
   }
 }
 
 function closeDeleteHouseholdSheet() {
-  showDeleteHouseholdSheet.value = false
-  deleteHouseholdStatus.value = 'idle'
+  showDeleteHouseholdSheet.value = false;
+  deleteHouseholdStatus.value = 'idle';
 }
 
 function handleDeleteHouseholdRequest() {
-  showDeleteHouseholdSheet.value = true
+  showDeleteHouseholdSheet.value = true;
 }
 
 async function handleDeleteHouseholdConfirm() {
-  if (deleteHouseholdStatus.value === 'loading') return
-  deleteHouseholdStatus.value = 'loading'
+  if (deleteHouseholdStatus.value === 'loading') return;
+  deleteHouseholdStatus.value = 'loading';
   try {
-    await pb.send('/api/household', { method: 'DELETE' })
-    closeDeleteHouseholdSheet()
-    await authStore.loadMembership()
-    await router.push('/setup')
+    await pb.send('/api/household', { method: 'DELETE' });
+    closeDeleteHouseholdSheet();
+    await authStore.loadMembership();
+    await router.push('/setup');
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't delete household — try again", life: 5000 })
-    deleteHouseholdStatus.value = 'error'
+    toast.add({ severity: 'error', summary: "Couldn't delete household — try again", life: 5000 });
+    deleteHouseholdStatus.value = 'error';
   }
 }
 
 function closeInviteSheet() {
-  showInviteSheet.value = false
-  inviteLink.value = ''
-  inviteCopied.value = false
-  inviteStatus.value = 'idle'
+  showInviteSheet.value = false;
+  inviteLink.value = '';
+  inviteCopied.value = false;
+  inviteStatus.value = 'idle';
   if (inviteCopiedTimer !== null) {
-    clearTimeout(inviteCopiedTimer)
-    inviteCopiedTimer = null
+    clearTimeout(inviteCopiedTimer);
+    inviteCopiedTimer = null;
   }
 }
 
 async function handleInviteOpen() {
-  if (!authStore.householdId) return
-  if (inviteStatus.value === 'loading') return
-  inviteStatus.value = 'loading'
+  if (!authStore.householdId) return;
+  if (inviteStatus.value === 'loading') return;
+  inviteStatus.value = 'loading';
   try {
     // Reuse an existing unaccepted invite to avoid accumulating orphaned tokens
-    let token: string
+    let token: string;
     try {
-      const existing = await pb.collection('invitations').getFirstListItem<{ token: string }>(
-        pb.filter('household_id = {:hid} && accepted = false', { hid: authStore.householdId })
-      )
-      token = existing['token']
+      const existing = await pb.collection('invitations').getFirstListItem<{
+        token: string;
+      }>(pb.filter('household_id = {:hid} && accepted = false', { hid: authStore.householdId }));
+      token = existing['token'];
     } catch (e: any) {
-      if (e?.status !== 404) throw e
+      if (e?.status !== 404) throw e;
       // No existing invite — create one
       const record = await pb.collection('invitations').create<{ token: string }>({
         household_id: authStore.householdId,
-      })
-      token = record['token']
+      });
+      token = record['token'];
     }
-    inviteLink.value = `${window.location.origin}/invite/${token}`
-    inviteStatus.value = 'success'
-    showInviteSheet.value = true
+    inviteLink.value = `${window.location.origin}/invite/${token}`;
+    inviteStatus.value = 'success';
+    showInviteSheet.value = true;
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't generate invite link — try again", life: 5000 })
-    inviteStatus.value = 'error'
+    toast.add({
+      severity: 'error',
+      summary: "Couldn't generate invite link — try again",
+      life: 5000,
+    });
+    inviteStatus.value = 'error';
   }
 }
 
 async function copyInviteLink() {
   try {
-    await navigator.clipboard.writeText(inviteLink.value)
-    inviteCopied.value = true
-    if (inviteCopiedTimer !== null) clearTimeout(inviteCopiedTimer)
-    inviteCopiedTimer = setTimeout(() => { inviteCopied.value = false; inviteCopiedTimer = null }, 1500)
+    await navigator.clipboard.writeText(inviteLink.value);
+    inviteCopied.value = true;
+    if (inviteCopiedTimer !== null) clearTimeout(inviteCopiedTimer);
+    inviteCopiedTimer = setTimeout(() => {
+      inviteCopied.value = false;
+      inviteCopiedTimer = null;
+    }, 1500);
   } catch {
     // clipboard may be unavailable in some environments
   }
 }
 
 async function handleSave() {
-  validateName()
-  if (!canSave.value) return
-  if (!authStore.householdId) return
-  saveStatus.value = 'loading'
+  validateName();
+  if (!canSave.value) return;
+  if (!authStore.householdId) return;
+  saveStatus.value = 'loading';
   try {
     const payload = {
       name: formData.value.name.trim(),
       currency: formData.value.currency,
       split_ratios: { ...splitRatioForm.value },
       reminder_day: formData.value.reminder_day,
-    }
-    const updated = await pb.collection('households').update<Household>(authStore.householdId, payload)
+    };
+    const updated = await pb
+      .collection('households')
+      .update<Household>(authStore.householdId, payload);
 
     householdStore.populate({
       id: updated.id,
@@ -353,19 +374,19 @@ async function handleSave() {
       currency: updated.currency,
       split_ratios: updated.split_ratios,
       reminder_day: updated.reminder_day,
-    })
+    });
 
     originalData.value = {
       name: updated.name,
       currency: updated.currency,
       reminder_day: updated.reminder_day,
       split_ratios: { ...updated.split_ratios },
-    }
-    toast.add({ severity: 'success', summary: 'Household preferences saved', life: 3000 })
-    saveStatus.value = 'success'
+    };
+    toast.add({ severity: 'success', summary: 'Household preferences saved', life: 3000 });
+    saveStatus.value = 'success';
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't save — try again", life: 5000 })
-    saveStatus.value = 'error'
+    toast.add({ severity: 'error', summary: "Couldn't save — try again", life: 5000 });
+    saveStatus.value = 'error';
   }
 }
 </script>
@@ -416,11 +437,7 @@ async function handleSave() {
           </div>
           <div class="pref-card">
             <p class="field-label-upper">DEFAULT SPLIT RATIO</p>
-            <div
-              v-for="member in sortedMembers"
-              :key="member.id"
-              class="split-row"
-            >
+            <div v-for="member in sortedMembers" :key="member.id" class="split-row">
               <div class="member-name-group">
                 <UserAvatar :size="28" :user-record="member.expand?.user_id" />
                 <span class="member-name">{{ getMemberName(member) }}</span>
@@ -489,7 +506,8 @@ async function handleSave() {
             <p class="section-label danger-section">DANGER ZONE</p>
             <div class="danger-zone">
               <p class="danger-description">
-                You are the only member of this household. Deleting it is permanent and cannot be undone.
+                You are the only member of this household. Deleting it is permanent and cannot be
+                undone.
               </p>
               <Button
                 label="Delete household"
@@ -522,26 +540,18 @@ async function handleSave() {
   <BottomSheet v-model:open="showInviteSheet" title="Invite member">
     <div class="form-field">
       <label for="invite-link">Share this link</label>
-      <InputText
-        id="invite-link"
-        :model-value="inviteLink"
-        readonly
-      />
+      <InputText id="invite-link" :model-value="inviteLink" readonly />
     </div>
     <div class="sheet-actions">
-      <Button
-        :label="inviteCopied ? 'Copied!' : 'Copy link'"
-        outlined
-        @click="copyInviteLink"
-      />
+      <Button :label="inviteCopied ? 'Copied!' : 'Copy link'" outlined @click="copyInviteLink" />
       <Button label="Done" @click="closeInviteSheet" />
     </div>
   </BottomSheet>
 
   <BottomSheet v-model:open="showRemoveSheet" title="Remove member">
     <p class="confirm-text">
-      Remove <strong>{{ memberToRemove ? getMemberName(memberToRemove) : '' }}</strong> from the household?
-      They will lose access immediately.
+      Remove <strong>{{ memberToRemove ? getMemberName(memberToRemove) : '' }}</strong> from the
+      household? They will lose access immediately.
     </p>
     <div class="sheet-actions">
       <Button label="Cancel" text @click="closeRemoveSheet" />
@@ -590,7 +600,8 @@ async function handleSave() {
       <strong>This action is permanent and cannot be undone.</strong>
     </p>
     <p class="confirm-text">
-      All expenses, meal plans, grocery lists, invitations, and member data for this household will be permanently deleted. There is no recovery.
+      All expenses, meal plans, grocery lists, invitations, and member data for this household will
+      be permanently deleted. There is no recovery.
     </p>
     <div class="sheet-actions">
       <Button label="Cancel" text @click="closeDeleteHouseholdSheet" />

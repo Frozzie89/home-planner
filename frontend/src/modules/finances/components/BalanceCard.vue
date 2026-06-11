@@ -1,69 +1,72 @@
 <script setup lang="ts">
-import { computed, ref, watch, onBeforeUnmount } from 'vue'
-import { getMemberName } from '@/shared/lib/memberHelpers'
-import { getCurrencyLocale } from '@/shared/lib/currencyHelpers'
-import type { Balance } from '@/modules/finances/types'
-import type { MemberRecord } from '@/modules/household/types'
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
+import { getMemberName } from '@/shared/lib/memberHelpers';
+import { getCurrencyLocale } from '@/shared/lib/currencyHelpers';
+import type { Balance } from '@/modules/finances/types';
+import type { MemberRecord } from '@/modules/household/types';
 
 const props = defineProps<{
-  balance: Balance
-  otherMember: MemberRecord
-  currency: string
-}>()
+  balance: Balance;
+  otherMember: MemberRecord;
+  currency: string;
+}>();
 
-const emit = defineEmits<{ 'settle-up': [] }>()
+const emit = defineEmits<{ 'settle-up': [] }>();
 
-const isPositive = computed(() => props.balance.amount > 0)
-const isNegative = computed(() => props.balance.amount < 0)
-const isZero = computed(() => props.balance.amount === 0)
+const isPositive = computed(() => props.balance.amount > 0);
+const isNegative = computed(() => props.balance.amount < 0);
+const isZero = computed(() => props.balance.amount === 0);
 
 // ── Animated display amount ───────────────────────────────────────────────────
 
-const displayedAmount = ref(props.balance.amount)
-let rafId: number | null = null
+const displayedAmount = ref(props.balance.amount);
+let rafId: number | null = null;
 
-watch(() => props.balance.amount, (newVal) => {
-  if (typeof window === 'undefined') {
-    displayedAmount.value = newVal
-    return
-  }
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    displayedAmount.value = newVal
-    return
-  }
-
-  const from = displayedAmount.value
-  const to = newVal
-  const start = performance.now()
-  const duration = 300
-
-  function step(now: number) {
-    const t = Math.min((now - start) / duration, 1)
-    const eased = 1 - Math.pow(1 - t, 2)
-    displayedAmount.value = Math.round(from + (to - from) * eased)
-    if (t < 1) {
-      rafId = requestAnimationFrame(step)
-    } else {
-      displayedAmount.value = to
-      rafId = null
+watch(
+  () => props.balance.amount,
+  (newVal) => {
+    if (typeof window === 'undefined') {
+      displayedAmount.value = newVal;
+      return;
     }
-  }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      displayedAmount.value = newVal;
+      return;
+    }
 
-  if (rafId !== null) cancelAnimationFrame(rafId)
-  rafId = requestAnimationFrame(step)
-})
+    const from = displayedAmount.value;
+    const to = newVal;
+    const start = performance.now();
+    const duration = 300;
+
+    function step(now: number) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 2);
+      displayedAmount.value = Math.round(from + (to - from) * eased);
+      if (t < 1) {
+        rafId = requestAnimationFrame(step);
+      } else {
+        displayedAmount.value = to;
+        rafId = null;
+      }
+    }
+
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(step);
+  }
+);
 
 onBeforeUnmount(() => {
-  if (rafId !== null) cancelAnimationFrame(rafId)
-})
+  if (rafId !== null) cancelAnimationFrame(rafId);
+});
 
-const otherName = computed(() => getMemberName(props.otherMember))
+const otherName = computed(() => getMemberName(props.otherMember));
 
 const directionText = computed(() => {
-  if (isPositive.value) return `${otherName.value} owes you`
-  if (isNegative.value) return `You owe ${otherName.value}`
-  return 'All settled'
-})
+  if (isPositive.value) return `${otherName.value} owes you`;
+  if (isNegative.value) return `You owe ${otherName.value}`;
+  return 'All settled';
+});
 
 // aria-label uses the real (non-animated) amount for correctness
 const formattedAmount = computed(() => {
@@ -73,11 +76,11 @@ const formattedAmount = computed(() => {
     currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
-  const abs = fmt.format(Math.abs(props.balance.amount) / 100)
-  const sign = isPositive.value ? '+' : isNegative.value ? '−' : ''
-  return `${sign}${abs}`
-})
+  });
+  const abs = fmt.format(Math.abs(props.balance.amount) / 100);
+  const sign = isPositive.value ? '+' : isNegative.value ? '−' : '';
+  return `${sign}${abs}`;
+});
 
 // Split amount into parts for animated integer display
 const amountParts = computed(() => {
@@ -87,74 +90,62 @@ const amountParts = computed(() => {
     currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
-  const parts = fmt.formatToParts(Math.abs(displayedAmount.value) / 100)
-  let prefix = ''
-  let intPart = ''
-  let frac = ''
-  let suffix = ''
+  });
+  const parts = fmt.formatToParts(Math.abs(displayedAmount.value) / 100);
+  let prefix = '';
+  let intPart = '';
+  let frac = '';
+  let suffix = '';
 
-  type Phase = 'pre' | 'int' | 'frac' | 'post'
-  let phase: Phase = 'pre'
+  type Phase = 'pre' | 'int' | 'frac' | 'post';
+  let phase: Phase = 'pre';
 
   for (const p of parts) {
     if (p.type === 'integer' || p.type === 'group') {
-      phase = 'int'
-      intPart += p.value
+      phase = 'int';
+      intPart += p.value;
     } else if (p.type === 'decimal' || p.type === 'fraction') {
-      phase = 'frac'
-      frac += p.value
+      phase = 'frac';
+      frac += p.value;
     } else if (phase === 'frac' || phase === 'post') {
-      phase = 'post'
-      suffix += p.value
+      phase = 'post';
+      suffix += p.value;
     } else {
-      prefix += p.value
+      prefix += p.value;
     }
   }
 
   // Sign and color use the real (non-animated) amount — never flip mid-animation
-  const sign = isPositive.value ? '+' : isNegative.value ? '−' : '' // U+2212 minus sign
-  return { sign, prefix, intPart, frac, suffix }
-})
+  const sign = isPositive.value ? '+' : isNegative.value ? '−' : ''; // U+2212 minus sign
+  return { sign, prefix, intPart, frac, suffix };
+});
 
 const cardClass = computed(() => ({
   'state-nonzero': !isZero.value,
   'state-zero': isZero.value,
-}))
+}));
 
 const amountClass = computed(() => ({
   'amt-positive': isPositive.value,
   'amt-negative': isNegative.value,
   'amt-zero': isZero.value,
-}))
+}));
 </script>
 
 <template>
-  <div
-    class="slim-card"
-    :class="cardClass"
-    role="region"
-    :aria-label="`Balance with ${otherName}`"
-  >
+  <div class="slim-card" :class="cardClass" role="region" :aria-label="`Balance with ${otherName}`">
     <div class="slim-info">
       <div class="slim-name">{{ otherName }}</div>
       <div class="slim-dir" :class="{ 'dir-settled': isZero }">{{ directionText }}</div>
     </div>
-    <div
-      class="slim-amt"
-      :class="amountClass"
-      aria-live="polite"
-      :aria-label="formattedAmount"
-    >
-      <span class="amt-main">{{ amountParts.sign }}{{ amountParts.prefix }}{{ amountParts.intPart }}</span><span class="amt-frac">{{ amountParts.frac }}</span><span v-if="amountParts.suffix" class="amt-main">{{ amountParts.suffix }}</span>
+    <div class="slim-amt" :class="amountClass" aria-live="polite" :aria-label="formattedAmount">
+      <span class="amt-main"
+        >{{ amountParts.sign }}{{ amountParts.prefix }}{{ amountParts.intPart }}</span
+      ><span class="amt-frac">{{ amountParts.frac }}</span
+      ><span v-if="amountParts.suffix" class="amt-main">{{ amountParts.suffix }}</span>
     </div>
     <div class="slim-action">
-      <button
-        v-if="!isZero"
-        type="button"
-        class="btn-settle"
-        @click="emit('settle-up')"
-      >
+      <button v-if="!isZero" type="button" class="btn-settle" @click="emit('settle-up')">
         Settle up
       </button>
       <div v-else class="settled-check" aria-hidden="true">✓</div>
@@ -178,11 +169,11 @@ const amountClass = computed(() => ({
 }
 
 .slim-card.state-nonzero {
-  border-left: 4px solid var(--color-accent, #D4845A);
+  border-left: 4px solid var(--color-accent, #d4845a);
 }
 
 .slim-card.state-zero {
-  background-color: #FDF3DC;
+  background-color: #fdf3dc;
 }
 
 .slim-info {
@@ -239,9 +230,15 @@ const amountClass = computed(() => ({
   justify-content: flex-end;
 }
 
-.slim-amt.amt-positive { color: var(--color-balance-positive); }
-.slim-amt.amt-negative { color: var(--color-balance-negative); }
-.slim-amt.amt-zero     { color: var(--color-text-secondary); }
+.slim-amt.amt-positive {
+  color: var(--color-balance-positive);
+}
+.slim-amt.amt-negative {
+  color: var(--color-balance-negative);
+}
+.slim-amt.amt-zero {
+  color: var(--color-text-secondary);
+}
 
 .amt-main {
   font-size: 2rem;
@@ -258,8 +255,8 @@ const amountClass = computed(() => ({
   min-height: 36px;
   padding: 0 var(--space-2);
   background-color: transparent;
-  color: #9B4E2A;
-  border: 2px solid var(--color-accent, #D4845A);
+  color: #9b4e2a;
+  border: 2px solid var(--color-accent, #d4845a);
   border-radius: 20px;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -276,8 +273,8 @@ const amountClass = computed(() => ({
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 2px solid #E8A838;
-  color: #E8A838;
+  border: 2px solid #e8a838;
+  color: #e8a838;
   display: flex;
   align-items: center;
   justify-content: center;

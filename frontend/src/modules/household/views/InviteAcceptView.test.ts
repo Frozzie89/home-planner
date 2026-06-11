@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import { setActivePinia, createPinia } from 'pinia'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
+import { setActivePinia, createPinia } from 'pinia';
 
 const { mockSend, mockListAuthMethods, mockAuthStore } = vi.hoisted(() => ({
   mockSend: vi.fn(),
@@ -10,7 +10,7 @@ const { mockSend, mockListAuthMethods, mockAuthStore } = vi.hoisted(() => ({
     isValid: false,
     record: null,
   },
-}))
+}));
 
 vi.mock('@/shared/lib/pocketbase', () => ({
   pb: {
@@ -20,17 +20,17 @@ vi.mock('@/shared/lib/pocketbase', () => ({
     }),
     authStore: mockAuthStore,
   },
-}))
+}));
 
 vi.mock('vue-router', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('vue-router')>()
+  const actual = await importOriginal<typeof import('vue-router')>();
   return {
     ...actual,
     useRoute: () => ({ params: { token: 'test-token-abc123' } }),
-  }
-})
+  };
+});
 
-import InviteAcceptView from './InviteAcceptView.vue'
+import InviteAcceptView from './InviteAcceptView.vue';
 
 const MOCK_PROVIDERS = [
   {
@@ -39,7 +39,7 @@ const MOCK_PROVIDERS = [
     codeVerifier: 'verifier-abc',
     authURL: 'https://discord.com/oauth2/authorize?',
   },
-]
+];
 
 function mountView() {
   return mount(InviteAcceptView, {
@@ -50,104 +50,104 @@ function mountView() {
       },
     },
     attachTo: document.body,
-  })
+  });
 }
 
 describe('InviteAcceptView', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
-    vi.clearAllMocks()
-    mockAuthStore.isValid = false
-    localStorage.clear()
-    sessionStorage.clear()
-    mockListAuthMethods.mockResolvedValue({ oauth2: { providers: [...MOCK_PROVIDERS] } })
-  })
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    mockAuthStore.isValid = false;
+    localStorage.clear();
+    sessionStorage.clear();
+    mockListAuthMethods.mockResolvedValue({ oauth2: { providers: [...MOCK_PROVIDERS] } });
+  });
 
   it('shows "Checking your invitation…" while validating', () => {
-    mockSend.mockReturnValue(new Promise(() => {}))
-    const wrapper = mountView()
-    expect(wrapper.text()).toContain('Checking your invitation')
-  })
+    mockSend.mockReturnValue(new Promise(() => {}));
+    const wrapper = mountView();
+    expect(wrapper.text()).toContain('Checking your invitation');
+  });
 
   it('shows household name and sign-in button when token is valid', async () => {
-    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.text()).toContain('The Jolys')
-    expect(wrapper.text()).toContain('Sign in with Discord to join')
-  })
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' });
+    const wrapper = mountView();
+    await flushPromises();
+    expect(wrapper.text()).toContain('The Jolys');
+    expect(wrapper.text()).toContain('Sign in with Discord to join');
+  });
 
   it('shows invalid error when token is invalid or already used', async () => {
-    mockSend.mockRejectedValue({ status: 404 })
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.text()).toContain('This invitation link is invalid or has already been used')
-    expect(wrapper.find('.invite-home-link').exists()).toBe(true)
-  })
+    mockSend.mockRejectedValue({ status: 404 });
+    const wrapper = mountView();
+    await flushPromises();
+    expect(wrapper.text()).toContain('This invitation link is invalid or has already been used');
+    expect(wrapper.find('.invite-home-link').exists()).toBe(true);
+  });
 
   it('writes pending_invite_token to localStorage on sign-in click', async () => {
-    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' });
     // prevent full redirect in test
     const assignSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
       ...window.location,
       origin: 'http://localhost:5173',
-    } as Location)
+    } as Location);
     Object.defineProperty(window, 'location', {
       writable: true,
       value: { ...window.location, href: '', origin: 'http://localhost:5173' },
-    })
+    });
 
-    const wrapper = mountView()
-    await flushPromises()
+    const wrapper = mountView();
+    await flushPromises();
 
-    const btn = wrapper.find('.auth-provider-btn')
-    expect(btn.exists()).toBe(true)
-    await btn.trigger('click')
+    const btn = wrapper.find('.auth-provider-btn');
+    expect(btn.exists()).toBe(true);
+    await btn.trigger('click');
 
-    expect(localStorage.getItem('pending_invite_token')).toBe('test-token-abc123')
-    assignSpy.mockRestore()
-  })
+    expect(localStorage.getItem('pending_invite_token')).toBe('test-token-abc123');
+    assignSpy.mockRestore();
+  });
 
   it('clears existing session on mount when user is already authenticated', async () => {
-    mockAuthStore.isValid = true
-    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
-    mountView()
-    await flushPromises()
-    expect(mockAuthStore.clear).toHaveBeenCalled()
-  })
+    mockAuthStore.isValid = true;
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' });
+    mountView();
+    await flushPromises();
+    expect(mockAuthStore.clear).toHaveBeenCalled();
+  });
 
   it('does not call clear when no session exists on mount', async () => {
-    mockAuthStore.isValid = false
-    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
-    mountView()
-    await flushPromises()
-    expect(mockAuthStore.clear).not.toHaveBeenCalled()
-  })
+    mockAuthStore.isValid = false;
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' });
+    mountView();
+    await flushPromises();
+    expect(mockAuthStore.clear).not.toHaveBeenCalled();
+  });
 
   it('shows error message when loadProviders fails', async () => {
-    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
-    mockListAuthMethods.mockRejectedValue(new Error('network error'))
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.text()).toContain('Unable to load sign-in options')
-    expect(wrapper.find('.auth-provider-btn').exists()).toBe(false)
-  })
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' });
+    mockListAuthMethods.mockRejectedValue(new Error('network error'));
+    const wrapper = mountView();
+    await flushPromises();
+    expect(wrapper.text()).toContain('Unable to load sign-in options');
+    expect(wrapper.find('.auth-provider-btn').exists()).toBe(false);
+  });
 
   it('stores oauth provider in sessionStorage on sign-in click', async () => {
-    mockSend.mockResolvedValue({ householdName: 'The Jolys' })
+    mockSend.mockResolvedValue({ householdName: 'The Jolys' });
     Object.defineProperty(window, 'location', {
       writable: true,
       value: { ...window.location, href: '', origin: 'http://localhost:5173' },
-    })
+    });
 
-    const wrapper = mountView()
-    await flushPromises()
+    const wrapper = mountView();
+    await flushPromises();
 
-    const btn = wrapper.find('.auth-provider-btn')
-    await btn.trigger('click')
+    const btn = wrapper.find('.auth-provider-btn');
+    await btn.trigger('click');
 
-    const stored = JSON.parse(sessionStorage.getItem('oauth_provider') || '{}')
-    expect(stored.name).toBe('discord')
-    expect(stored.state).toBe('state-abc')
-  })
-})
+    const stored = JSON.parse(sessionStorage.getItem('oauth_provider') || '{}');
+    expect(stored.name).toBe('discord');
+    expect(stored.state).toBe('state-abc');
+  });
+});

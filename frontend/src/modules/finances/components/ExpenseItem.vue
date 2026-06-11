@@ -1,64 +1,67 @@
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue'
-import { getCurrencyLocale } from '@/shared/lib/currencyHelpers'
-import type { Expense } from '@/modules/finances/types'
+import { computed, ref, onUnmounted } from 'vue';
+import { getCurrencyLocale } from '@/shared/lib/currencyHelpers';
+import type { Expense } from '@/modules/finances/types';
 
 const props = defineProps<{
-  expense: Expense
-  currency: string
-  payerLabel: string
-  customPortionLabel: string | null
-  viewerShareCents: number
-  isLast: boolean
-  canModify: boolean
-  avatarStyle: { bg: string; fg: string }
-}>()
+  expense: Expense;
+  currency: string;
+  payerLabel: string;
+  customPortionLabel: string | null;
+  viewerShareCents: number;
+  isLast: boolean;
+  canModify: boolean;
+  avatarStyle: { bg: string; fg: string };
+}>();
 
 const emit = defineEmits<{
-  edit: []
-  delete: []
-}>()
+  edit: [];
+  delete: [];
+}>();
 
 function parseDate(dateStr: string): Date {
-  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
-  return new Date(y!, m! - 1, d!)
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y!, m! - 1, d!);
 }
 
 const formattedDate = computed(() =>
   parseDate(props.expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-)
+);
 
-const fmt = computed(() =>
-  new Intl.NumberFormat(getCurrencyLocale(props.currency), {
-    style: 'currency',
-    currency: props.currency,
-    currencyDisplay: 'narrowSymbol',
-  })
-)
+const fmt = computed(
+  () =>
+    new Intl.NumberFormat(getCurrencyLocale(props.currency), {
+      style: 'currency',
+      currency: props.currency,
+      currencyDisplay: 'narrowSymbol',
+    })
+);
 
-const formattedAmount = computed(() => fmt.value.format(props.expense.amount / 100))
-const formattedShare = computed(() => fmt.value.format(props.viewerShareCents / 100))
+const formattedAmount = computed(() => fmt.value.format(props.expense.amount / 100));
+const formattedShare = computed(() => fmt.value.format(props.viewerShareCents / 100));
 
 // Long-press state for touch devices
-const isActive = ref(false)
-let longPressTimer: ReturnType<typeof setTimeout> | null = null
+const isActive = ref(false);
+let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
 function onTouchStart() {
-  longPressTimer = setTimeout(() => { isActive.value = true }, 500)
+  longPressTimer = setTimeout(() => {
+    isActive.value = true;
+  }, 500);
 }
 
 function cancelLongPress() {
   if (longPressTimer) {
-    clearTimeout(longPressTimer)
-    longPressTimer = null
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
   }
 }
 
 function onRowClick() {
-  if (isActive.value) isActive.value = false
+  if (isActive.value) isActive.value = false;
 }
 
-onUnmounted(cancelLongPress)
+onUnmounted(cancelLongPress);
 </script>
 
 <template>
@@ -83,7 +86,8 @@ onUnmounted(cancelLongPress)
     <div class="expense-content">
       <span class="expense-title">{{ expense.title }}</span>
       <span class="expense-meta">
-        {{ payerLabel }} · {{ formattedDate }}{{ customPortionLabel ? ` · ${customPortionLabel}` : '' }}
+        {{ payerLabel }} · {{ formattedDate
+        }}{{ customPortionLabel ? ` · ${customPortionLabel}` : '' }}
       </span>
     </div>
 
@@ -95,12 +99,7 @@ onUnmounted(cancelLongPress)
 
     <!-- Edit / Delete actions — revealed on hover (desktop) or long-press (mobile) -->
     <div v-if="canModify" class="expense-actions">
-      <button
-        type="button"
-        class="action-btn"
-        aria-label="Edit expense"
-        @click.stop="emit('edit')"
-      >
+      <button type="button" class="action-btn" aria-label="Edit expense" @click.stop="emit('edit')">
         <i class="pi pi-pencil" />
       </button>
       <button
@@ -135,8 +134,12 @@ onUnmounted(cancelLongPress)
 }
 
 @keyframes highlight-new {
-  0%   { background-color: color-mix(in srgb, var(--color-balance-positive) 30%, var(--p-surface-card)); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: color-mix(in srgb, var(--color-balance-positive) 30%, var(--p-surface-card));
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 .expense-avatar {

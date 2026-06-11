@@ -1,23 +1,27 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/shared/stores/auth'
-import { useUiStore } from '@/shared/stores/ui'
-import { useHouseholdStore } from '@/modules/household/stores/household'
-import UserAvatar from '@/shared/components/UserAvatar.vue'
+import { computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '@/shared/stores/auth';
+import { useUiStore } from '@/shared/stores/ui';
+import { useHouseholdStore } from '@/modules/household/stores/household';
+import UserAvatar from '@/shared/components/UserAvatar.vue';
 
-const router = useRouter()
-const route = useRoute()
-const authStore = useAuthStore()
-const uiStore = useUiStore()
-const householdStore = useHouseholdStore()
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
+const uiStore = useUiStore();
+const householdStore = useHouseholdStore();
 
-const isFinancesActive = computed(() => route.path.startsWith('/finances'))
-const isFoodActive = computed(() => route.path.startsWith('/food'))
-const isWideContent = computed(() => route.path === '/settings')
+const isFinancesActive = computed(() => route.path.startsWith('/finances'));
+const isFoodActive = computed(() => route.path.startsWith('/food'));
+const isWideContent = computed(() => route.path === '/settings');
 
 async function goTo(path: string) {
-  try { await router.push(path) } catch { /* NavigationFailure — user already on route */ }
+  try {
+    await router.push(path);
+  } catch {
+    /* NavigationFailure — user already on route */
+  }
 }
 </script>
 
@@ -35,13 +39,15 @@ async function goTo(path: string) {
             class="nav-link"
             :class="{ active: isFinancesActive }"
             :aria-current="isFinancesActive ? 'page' : undefined"
-          >Finances</RouterLink>
+            >Finances</RouterLink
+          >
           <RouterLink
             to="/food/meal-plan"
             class="nav-link"
             :class="{ active: isFoodActive }"
             :aria-current="isFoodActive ? 'page' : undefined"
-          >Food</RouterLink>
+            >Food</RouterLink
+          >
         </nav>
       </div>
 

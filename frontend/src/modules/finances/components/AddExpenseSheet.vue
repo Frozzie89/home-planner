@@ -1,75 +1,79 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import BottomSheet from '@/shared/components/BottomSheet.vue'
-import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
-import DatePicker from 'primevue/datepicker'
-import type { NewExpensePayload } from '@/modules/finances/types'
-import { getCurrencyLocale } from '@/shared/lib/currencyHelpers'
-import { getLocaleDateFormat } from '@/shared/lib/dateHelpers'
+import { ref, computed, watch } from 'vue';
+import BottomSheet from '@/shared/components/BottomSheet.vue';
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import DatePicker from 'primevue/datepicker';
+import type { NewExpensePayload } from '@/modules/finances/types';
+import { getCurrencyLocale } from '@/shared/lib/currencyHelpers';
+import { getLocaleDateFormat } from '@/shared/lib/dateHelpers';
 
-const localeDateFormat = getLocaleDateFormat(navigator.language)
+const localeDateFormat = getLocaleDateFormat(navigator.language);
 
 const props = defineProps<{
-  currency: string
-  defaultPortion: number
-}>()
+  currency: string;
+  defaultPortion: number;
+}>();
 
-const open = defineModel<boolean>('open', { default: false })
+const open = defineModel<boolean>('open', { default: false });
 
 const emit = defineEmits<{
-  submit: [payload: NewExpensePayload]
-}>()
+  submit: [payload: NewExpensePayload];
+}>();
 
-const title = ref('')
-const amountRaw = ref<number | null>(null)
-const date = ref<Date>(new Date())
-const portion = ref(props.defaultPortion)
-const showMoreOptions = ref(false)
+const title = ref('');
+const amountRaw = ref<number | null>(null);
+const date = ref<Date>(new Date());
+const portion = ref(props.defaultPortion);
+const showMoreOptions = ref(false);
 
-const titleTouched = ref(false)
-const amountTouched = ref(false)
+const titleTouched = ref(false);
+const amountTouched = ref(false);
 
 const titleError = computed(() =>
   titleTouched.value && !title.value.trim() ? 'Title is required' : ''
-)
+);
 const amountError = computed(() =>
   amountTouched.value && (amountRaw.value === null || amountRaw.value <= 0)
     ? 'Amount is required'
     : ''
-)
+);
 const canConfirm = computed(
   () => !!title.value.trim() && amountRaw.value !== null && amountRaw.value > 0
-)
+);
 
 function handleConfirm() {
-  if (!canConfirm.value) return
-  const amountCents = Math.round(amountRaw.value! * 100)
-  const d = date.value
-  const now = new Date()
-  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}Z`
+  if (!canConfirm.value) return;
+  const amountCents = Math.round(amountRaw.value! * 100);
+  const d = date.value;
+  const now = new Date();
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}Z`;
   emit('submit', {
     title: title.value.trim(),
     amount: amountCents,
     date: dateStr,
     portion: Math.min(100, Math.max(0, Math.round(portion.value))),
-  })
-  open.value = false
+  });
+  open.value = false;
 }
 
-watch(open, (isOpen) => {
-  if (isOpen) {
-    date.value = new Date()
-  } else {
-    title.value = ''
-    amountRaw.value = null
-    date.value = new Date()
-    portion.value = props.defaultPortion
-    showMoreOptions.value = false
-    titleTouched.value = false
-    amountTouched.value = false
-  }
-}, { flush: 'sync' })
+watch(
+  open,
+  (isOpen) => {
+    if (isOpen) {
+      date.value = new Date();
+    } else {
+      title.value = '';
+      amountRaw.value = null;
+      date.value = new Date();
+      portion.value = props.defaultPortion;
+      showMoreOptions.value = false;
+      titleTouched.value = false;
+      amountTouched.value = false;
+    }
+  },
+  { flush: 'sync' }
+);
 </script>
 
 <template>
@@ -80,7 +84,11 @@ watch(open, (isOpen) => {
         id="expense-title"
         v-model="title"
         placeholder="e.g. Groceries"
-        @blur="() => { if (open) titleTouched = true }"
+        @blur="
+          () => {
+            if (open) titleTouched = true;
+          }
+        "
       />
       <span v-if="titleError" class="field-error-text">{{ titleError }}</span>
     </div>
@@ -101,11 +109,7 @@ watch(open, (isOpen) => {
       <span v-if="amountError" class="field-error-text">{{ amountError }}</span>
     </div>
 
-    <button
-      type="button"
-      class="more-options-toggle"
-      @click="showMoreOptions = !showMoreOptions"
-    >
+    <button type="button" class="more-options-toggle" @click="showMoreOptions = !showMoreOptions">
       More options
       <i :class="showMoreOptions ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" />
     </button>
@@ -129,12 +133,7 @@ watch(open, (isOpen) => {
       </div>
     </div>
 
-    <button
-      type="button"
-      class="btn-confirm"
-      :disabled="!canConfirm"
-      @click="handleConfirm"
-    >
+    <button type="button" class="btn-confirm" :disabled="!canConfirm" @click="handleConfirm">
       Confirm
     </button>
   </BottomSheet>

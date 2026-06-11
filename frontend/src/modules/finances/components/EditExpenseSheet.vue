@@ -1,73 +1,77 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import BottomSheet from '@/shared/components/BottomSheet.vue'
-import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
-import DatePicker from 'primevue/datepicker'
-import type { Expense, UpdateExpensePayload } from '@/modules/finances/types'
-import { getCurrencyLocale } from '@/shared/lib/currencyHelpers'
-import { getLocaleDateFormat } from '@/shared/lib/dateHelpers'
+import { ref, computed, watch } from 'vue';
+import BottomSheet from '@/shared/components/BottomSheet.vue';
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import DatePicker from 'primevue/datepicker';
+import type { Expense, UpdateExpensePayload } from '@/modules/finances/types';
+import { getCurrencyLocale } from '@/shared/lib/currencyHelpers';
+import { getLocaleDateFormat } from '@/shared/lib/dateHelpers';
 
-const localeDateFormat = getLocaleDateFormat(navigator.language)
+const localeDateFormat = getLocaleDateFormat(navigator.language);
 
 const props = defineProps<{
-  expense: Expense
-  currency: string
-}>()
+  expense: Expense;
+  currency: string;
+}>();
 
-const open = defineModel<boolean>('open', { default: false })
+const open = defineModel<boolean>('open', { default: false });
 
 const emit = defineEmits<{
-  update: [payload: UpdateExpensePayload]
-}>()
+  update: [payload: UpdateExpensePayload];
+}>();
 
-const title = ref('')
-const amountRaw = ref<number | null>(null)
-const date = ref<Date>(new Date())
-const portion = ref(50)
-const showMoreOptions = ref(false)
-const titleTouched = ref(false)
-const amountTouched = ref(false)
+const title = ref('');
+const amountRaw = ref<number | null>(null);
+const date = ref<Date>(new Date());
+const portion = ref(50);
+const showMoreOptions = ref(false);
+const titleTouched = ref(false);
+const amountTouched = ref(false);
 
 const titleError = computed(() =>
   titleTouched.value && !title.value.trim() ? 'Title is required' : ''
-)
+);
 const amountError = computed(() =>
   amountTouched.value && (amountRaw.value === null || amountRaw.value <= 0)
     ? 'Amount is required'
     : ''
-)
+);
 const canConfirm = computed(
   () => !!title.value.trim() && amountRaw.value !== null && amountRaw.value > 0
-)
+);
 
 function handleConfirm() {
-  if (!canConfirm.value) return
-  const amountCents = Math.round(amountRaw.value! * 100)
-  const d = date.value
-  const now = new Date()
-  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}Z`
+  if (!canConfirm.value) return;
+  const amountCents = Math.round(amountRaw.value! * 100);
+  const d = date.value;
+  const now = new Date();
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}Z`;
   emit('update', {
     title: title.value.trim(),
     amount: amountCents,
     date: dateStr,
     portion: Math.min(100, Math.max(0, Math.round(portion.value))),
-  })
-  open.value = false
+  });
+  open.value = false;
 }
 
-watch(open, (isOpen) => {
-  if (isOpen) {
-    title.value = props.expense.title
-    amountRaw.value = props.expense.amount / 100
-    const [y, m, d] = props.expense.date.slice(0, 10).split('-').map(Number)
-    date.value = new Date(y!, m! - 1, d!)
-    portion.value = props.expense.portion
-    showMoreOptions.value = false
-    titleTouched.value = false
-    amountTouched.value = false
-  }
-}, { immediate: true })
+watch(
+  open,
+  (isOpen) => {
+    if (isOpen) {
+      title.value = props.expense.title;
+      amountRaw.value = props.expense.amount / 100;
+      const [y, m, d] = props.expense.date.slice(0, 10).split('-').map(Number);
+      date.value = new Date(y!, m! - 1, d!);
+      portion.value = props.expense.portion;
+      showMoreOptions.value = false;
+      titleTouched.value = false;
+      amountTouched.value = false;
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -99,11 +103,7 @@ watch(open, (isOpen) => {
       <span v-if="amountError" class="field-error-text">{{ amountError }}</span>
     </div>
 
-    <button
-      type="button"
-      class="more-options-toggle"
-      @click="showMoreOptions = !showMoreOptions"
-    >
+    <button type="button" class="more-options-toggle" @click="showMoreOptions = !showMoreOptions">
       More options
       <i :class="showMoreOptions ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" />
     </button>
@@ -127,12 +127,7 @@ watch(open, (isOpen) => {
       </div>
     </div>
 
-    <button
-      type="button"
-      class="btn-confirm"
-      :disabled="!canConfirm"
-      @click="handleConfirm"
-    >
+    <button type="button" class="btn-confirm" :disabled="!canConfirm" @click="handleConfirm">
       Save Changes
     </button>
   </BottomSheet>
