@@ -140,15 +140,15 @@ const amountClass = computed(() => ({
       <div class="slim-name">{{ otherName }}</div>
       <div class="slim-dir" :class="{ 'dir-settled': isZero }">{{ directionText }}</div>
     </div>
-    <div class="slim-right">
-      <div
-        class="slim-amt"
-        :class="amountClass"
-        aria-live="polite"
-        :aria-label="formattedAmount"
-      >
-        <span class="amt-main">{{ amountParts.sign }}{{ amountParts.prefix }}{{ amountParts.intPart }}</span><span class="amt-frac">{{ amountParts.frac }}</span><span v-if="amountParts.suffix" class="amt-main">{{ amountParts.suffix }}</span>
-      </div>
+    <div
+      class="slim-amt"
+      :class="amountClass"
+      aria-live="polite"
+      :aria-label="formattedAmount"
+    >
+      <span class="amt-main">{{ amountParts.sign }}{{ amountParts.prefix }}{{ amountParts.intPart }}</span><span class="amt-frac">{{ amountParts.frac }}</span><span v-if="amountParts.suffix" class="amt-main">{{ amountParts.suffix }}</span>
+    </div>
+    <div class="slim-action">
       <button
         v-if="!isZero"
         type="button"
@@ -183,14 +183,25 @@ const amountClass = computed(() => ({
 
 .slim-card.state-zero {
   background-color: #FDF3DC;
-  border-color: transparent;
 }
 
 .slim-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .slim-card {
+    flex-wrap: wrap;
+  }
+
+  .slim-info {
+    flex: none;
+    width: 100%;
+  }
 }
 
 .slim-name {
@@ -212,19 +223,20 @@ const amountClass = computed(() => ({
   font-weight: 500;
 }
 
-.slim-right {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
 .slim-amt {
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   @media (prefers-reduced-motion: no-preference) {
     transition: color 300ms ease-out;
   }
+}
+
+.slim-action {
+  flex-shrink: 0;
+  width: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .slim-amt.amt-positive { color: var(--color-balance-positive); }
@@ -261,11 +273,16 @@ const amountClass = computed(() => ({
 }
 
 .settled-check {
-  font-size: 1rem;
-  font-weight: 700;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #E8A838;
   color: #E8A838;
-  min-height: 36px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  font-weight: 700;
+  opacity: 0.8;
 }
 </style>
