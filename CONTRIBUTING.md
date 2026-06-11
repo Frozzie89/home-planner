@@ -73,7 +73,25 @@ New features require new E2E tests covering the happy path.
 
 ### Code style
 
-The project uses TypeScript with Vue 3 Composition API. There is no automated formatter enforced yet, Prettier integration is planned. Until then, follow the style of the surrounding code.
+The project uses TypeScript with Vue 3 Composition API and enforces formatting with [Prettier](https://prettier.io/).
+
+Before committing, format your changes:
+
+```sh
+cd frontend
+npm run format
+```
+
+To check formatting without writing:
+
+```sh
+cd frontend
+npm run format:check
+```
+
+The CI pipeline runs `format:check` on every push and pull request. Unformatted code will fail the build.
+
+Key Prettier settings (see `frontend/.prettierrc.json`): single quotes, semicolons, 100-character print width, 2-space indent, trailing commas where valid in ES5.
 
 ---
 

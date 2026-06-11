@@ -1,85 +1,98 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
-const open = defineModel<boolean>('open', { default: false })
+const open = defineModel<boolean>('open', { default: false });
 const props = defineProps<{
-  title?: string
-}>()
+  title?: string;
+}>();
 
-const sheetRef = ref<HTMLElement | null>(null)
-let _triggerElement: HTMLElement | null = null
+const sheetRef = ref<HTMLElement | null>(null);
+let _triggerElement: HTMLElement | null = null;
 
 // --- Visual viewport tracking (keeps sheet above the keyboard on mobile) ---
-const vpHeight = ref(typeof window !== 'undefined' ? (window.visualViewport?.height ?? window.innerHeight) : 600)
-const vpOffsetTop = ref(0)
+const vpHeight = ref(
+  typeof window !== 'undefined' ? (window.visualViewport?.height ?? window.innerHeight) : 600
+);
+const vpOffsetTop = ref(0);
 
 function syncViewport() {
-  const vv = window.visualViewport
-  vpHeight.value = vv ? vv.height : window.innerHeight
-  vpOffsetTop.value = vv ? vv.offsetTop : 0
+  const vv = window.visualViewport;
+  vpHeight.value = vv ? vv.height : window.innerHeight;
+  vpOffsetTop.value = vv ? vv.offsetTop : 0;
 }
 
 const overlayStyle = computed(() => ({
   height: `${vpHeight.value}px`,
   top: `${vpOffsetTop.value}px`,
-}))
+}));
 
 // --- Keyboard: Escape + focus trap ---
 function handleKeyDown(e: KeyboardEvent) {
-  if (!open.value) return
+  if (!open.value) return;
   if (e.key === 'Escape') {
-    open.value = false
-    return
+    open.value = false;
+    return;
   }
   if (e.key === 'Tab') {
     const focusable = Array.from(
       sheetRef.value?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []
-    )
-    if (focusable.length === 0) { e.preventDefault(); return }
-    const first = focusable[0]!
-    const last = focusable[focusable.length - 1]!
+    );
+    if (focusable.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
     if (e.shiftKey) {
-      if (document.activeElement === first) { e.preventDefault(); last.focus() }
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
     } else {
-      if (document.activeElement === last) { e.preventDefault(); first.focus() }
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
   }
 }
 
 onMounted(() => {
-  syncViewport()
-  window.visualViewport?.addEventListener('resize', syncViewport)
-  window.visualViewport?.addEventListener('scroll', syncViewport)
-  document.addEventListener('keydown', handleKeyDown)
-})
+  syncViewport();
+  window.visualViewport?.addEventListener('resize', syncViewport);
+  window.visualViewport?.addEventListener('scroll', syncViewport);
+  document.addEventListener('keydown', handleKeyDown);
+});
 
 onUnmounted(() => {
-  window.visualViewport?.removeEventListener('resize', syncViewport)
-  window.visualViewport?.removeEventListener('scroll', syncViewport)
-  document.removeEventListener('keydown', handleKeyDown)
-})
+  window.visualViewport?.removeEventListener('resize', syncViewport);
+  window.visualViewport?.removeEventListener('scroll', syncViewport);
+  document.removeEventListener('keydown', handleKeyDown);
+});
 
-const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // Auto-focus only on pointer devices (desktop); skip on touch to avoid keyboard
 // popping up before the sheet animation completes.
-const isTouch = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)')?.matches
+const isTouch =
+  typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)')?.matches;
 
 watch(open, async (isOpen) => {
   if (isOpen) {
-    _triggerElement = document.activeElement as HTMLElement
+    _triggerElement = document.activeElement as HTMLElement;
     if (!isTouch) {
-      await nextTick()
+      await nextTick();
       // Scope to .sheet-body so the close button (in .sheet-header) is not focused first
-      const body = sheetRef.value?.querySelector<HTMLElement>('.sheet-body')
-      const focusable = (body ?? sheetRef.value)?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
-      focusable?.focus()
+      const body = sheetRef.value?.querySelector<HTMLElement>('.sheet-body');
+      const focusable = (body ?? sheetRef.value)?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      focusable?.focus();
     }
   } else {
-    _triggerElement?.focus()
-    _triggerElement = null
+    _triggerElement?.focus();
+    _triggerElement = null;
   }
-})
+});
 </script>
 
 <template>

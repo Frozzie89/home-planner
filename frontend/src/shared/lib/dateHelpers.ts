@@ -5,16 +5,20 @@ export function getLocaleDateFormat(locale: string): string {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(new Date(2024, 11, 25)) // Dec 25 2024 — all fields unambiguous
+  }).formatToParts(new Date(2024, 11, 25)); // Dec 25 2024 — all fields unambiguous
 
   return parts
-    .map(part => {
+    .map((part) => {
       switch (part.type) {
-        case 'year':  return 'yy'
-        case 'month': return 'mm'
-        case 'day':   return 'dd'
-        default:      return part.value  // separator (., /, -)
+        case 'year':
+          return 'yy';
+        case 'month':
+          return 'mm';
+        case 'day':
+          return 'dd';
+        default:
+          return part.value; // separator (., /, -)
       }
     })
-    .join('')
+    .join('');
 }

@@ -22,7 +22,10 @@
         <p>{{ errorMessage }}</p>
       </div>
       <div v-else-if="providers.length === 0">
-        <p>No sign-in providers are configured on this instance. If you manage this server, enable at least one OAuth2 provider in the PocketBase admin panel under Settings -> Auth providers.</p>
+        <p>
+          No sign-in providers are configured on this instance. If you manage this server, enable at
+          least one OAuth2 provider in the PocketBase admin panel under Settings -> Auth providers.
+        </p>
       </div>
       <div v-else>
         <button
@@ -35,180 +38,191 @@
         </button>
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import Toast from 'primevue/toast'
-import { useToast } from 'primevue/usetoast'
-import { pb } from '@/shared/lib/pocketbase'
-import { useAuthStore } from '@/shared/stores/auth'
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+import { pb } from '@/shared/lib/pocketbase';
+import { useAuthStore } from '@/shared/stores/auth';
 
 interface OAuth2Provider {
-  name: string
-  state: string
-  codeVerifier: string
-  authURL: string
+  name: string;
+  state: string;
+  codeVerifier: string;
+  authURL: string;
 }
 
-const router = useRouter()
-const authStore = useAuthStore()
-const toast = useToast()
+const router = useRouter();
+const authStore = useAuthStore();
+const toast = useToast();
 
-const callbackStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
-const providersStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
-const providers = ref<OAuth2Provider[]>([])
-const errorMessage = ref('')
-const notRegisteredMessage = ref('')
+const callbackStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
+const providersStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
+const providers = ref<OAuth2Provider[]>([]);
+const errorMessage = ref('');
+const notRegisteredMessage = ref('');
 
 function capitalise(name: string): string {
-  return name.charAt(0).toUpperCase() + name.slice(1)
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 function resetToSignIn() {
-  callbackStatus.value = 'idle'
-  errorMessage.value = ''
-  loadProviders()
+  callbackStatus.value = 'idle';
+  errorMessage.value = '';
+  loadProviders();
 }
 
 async function loadProviders() {
-  providersStatus.value = 'loading'
+  providersStatus.value = 'loading';
   try {
-    const authMethods = await pb.collection('users').listAuthMethods()
-    providers.value = authMethods.oauth2.providers
-    providersStatus.value = 'success'
+    const authMethods = await pb.collection('users').listAuthMethods();
+    providers.value = authMethods.oauth2.providers;
+    providersStatus.value = 'success';
   } catch (e: any) {
     if (e?.status === 0 || e?.isAbort) {
-      providersStatus.value = 'error'
-      errorMessage.value = 'Cannot reach the authentication server. Check that PocketBase is running and reachable.'
+      providersStatus.value = 'error';
+      errorMessage.value =
+        'Cannot reach the authentication server. Check that PocketBase is running and reachable.';
     } else {
-      providersStatus.value = 'error'
-      errorMessage.value = `Sign-in unavailable (${e?.status ?? 'unknown error'}). Check the PocketBase admin panel.`
+      providersStatus.value = 'error';
+      errorMessage.value = `Sign-in unavailable (${e?.status ?? 'unknown error'}). Check the PocketBase admin panel.`;
     }
   }
 }
 
 async function startOAuth(provider: OAuth2Provider) {
-  const redirectUrl = `${window.location.origin}/auth`
+  const redirectUrl = `${window.location.origin}/auth`;
   try {
     sessionStorage.setItem(
       'oauth_provider',
-      JSON.stringify({ name: provider.name, state: provider.state, codeVerifier: provider.codeVerifier })
-    )
+      JSON.stringify({
+        name: provider.name,
+        state: provider.state,
+        codeVerifier: provider.codeVerifier,
+      })
+    );
   } catch {
-    callbackStatus.value = 'error'
-    errorMessage.value = 'Sign-in is unavailable in this browser context. Please try a regular (non-private) window.'
-    return
+    callbackStatus.value = 'error';
+    errorMessage.value =
+      'Sign-in is unavailable in this browser context. Please try a regular (non-private) window.';
+    return;
   }
-  window.location.href = `${provider.authURL}${encodeURIComponent(redirectUrl)}`
+  window.location.href = `${provider.authURL}${encodeURIComponent(redirectUrl)}`;
 }
 
 async function handleCallback(code: string, state: string) {
-  callbackStatus.value = 'loading'
+  callbackStatus.value = 'loading';
   try {
-    const saved = JSON.parse(sessionStorage.getItem('oauth_provider') || '{}')
+    const saved = JSON.parse(sessionStorage.getItem('oauth_provider') || '{}');
     if (saved.state !== state) {
-      callbackStatus.value = 'error'
-      errorMessage.value = 'Authentication failed — please try again.'
-      return
+      callbackStatus.value = 'error';
+      errorMessage.value = 'Authentication failed — please try again.';
+      return;
     }
 
-    const redirectUrl = `${window.location.origin}/auth`
-    await pb.collection('users').authWithOAuth2Code(saved.name, code, saved.codeVerifier, redirectUrl)
-    sessionStorage.removeItem('oauth_provider')
+    const redirectUrl = `${window.location.origin}/auth`;
+    await pb
+      .collection('users')
+      .authWithOAuth2Code(saved.name, code, saved.codeVerifier, redirectUrl);
+    sessionStorage.removeItem('oauth_provider');
 
-    await authStore.onOAuth2Success()
-    callbackStatus.value = 'success'
+    await authStore.onOAuth2Success();
+    callbackStatus.value = 'success';
 
     // Check for a pending invite token stored before the OAuth2 redirect
-    const pendingToken = localStorage.getItem('pending_invite_token')
+    const pendingToken = localStorage.getItem('pending_invite_token');
     if (pendingToken) {
       try {
-        await pb.send('/api/accept-invite', { method: 'POST', body: { token: pendingToken } })
-        localStorage.removeItem('pending_invite_token')
+        await pb.send('/api/accept-invite', { method: 'POST', body: { token: pendingToken } });
+        localStorage.removeItem('pending_invite_token');
         // Refresh membership so householdId is populated before the router guard evaluates
-        await authStore.loadMembership()
-        router.replace('/finances')
+        await authStore.loadMembership();
+        router.replace('/finances');
       } catch {
-        localStorage.removeItem('pending_invite_token')
+        localStorage.removeItem('pending_invite_token');
         toast.add({
           severity: 'error',
           summary: 'Invitation could not be accepted',
           detail: 'The link may have already been used.',
           life: 6000,
-        })
-        router.replace(authStore.householdId ? '/finances' : '/setup')
+        });
+        router.replace(authStore.householdId ? '/finances' : '/setup');
       }
-      return
+      return;
     }
 
     if (authStore.householdId) {
-      router.replace('/finances')
-      return
+      router.replace('/finances');
+      return;
     }
 
     // householdId is null: distinguish path 1 (no household) from path 3 (household exists, not a member)
-    const existsResponse = await pb.send<{ exists: boolean }>('/api/household/exists', { method: 'GET' })
+    const existsResponse = await pb.send<{ exists: boolean }>('/api/household/exists', {
+      method: 'GET',
+    });
     if (existsResponse.exists) {
       // Path 3: household exists but this user has no membership -> reject at auth layer.
       // Delete the orphaned user record before clearing the session — the token is still
       // valid here and the default deleteRule allows self-delete.
-      const orphanId = pb.authStore.record?.id
+      const orphanId = pb.authStore.record?.id;
       if (orphanId) {
         try {
-          await pb.collection('users').delete(orphanId)
+          await pb.collection('users').delete(orphanId);
         } catch {
           // best-effort — proceed with logout regardless
         }
       }
-      authStore.logout()
-      router.replace('/auth?error=not_registered')
+      authStore.logout();
+      router.replace('/auth?error=not_registered');
       // router.replace won't re-trigger onMounted — we're already on /auth, so set state directly
-      callbackStatus.value = 'idle'
-      notRegisteredMessage.value = "This account isn't linked to this household. You'll need an invitation link to join."
-      await loadProviders()
+      callbackStatus.value = 'idle';
+      notRegisteredMessage.value =
+        "This account isn't linked to this household. You'll need an invitation link to join.";
+      await loadProviders();
     } else {
       // Path 1: no household on this instance -> bootstrapper flow
-      router.replace('/setup')
+      router.replace('/setup');
     }
   } catch {
-    localStorage.removeItem('pending_invite_token')
-    callbackStatus.value = 'error'
-    errorMessage.value = 'Sign-in failed. Please try again.'
+    localStorage.removeItem('pending_invite_token');
+    callbackStatus.value = 'error';
+    errorMessage.value = 'Sign-in failed. Please try again.';
   }
 }
 
 onMounted(async () => {
-  const params = new URLSearchParams(window.location.search)
-  const code = params.get('code')
-  const state = params.get('state')
-  const error = params.get('error')
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  const error = params.get('error');
 
   if (error === 'not_registered') {
-    notRegisteredMessage.value = "This account isn't linked to this household. You'll need an invitation link to join."
+    notRegisteredMessage.value =
+      "This account isn't linked to this household. You'll need an invitation link to join.";
     // Fall through to loadProviders() — sign-in form shown with message
   } else if (error) {
-    callbackStatus.value = 'error'
-    errorMessage.value = 'Sign-in was denied by the provider. Please try again.'
-    return
+    callbackStatus.value = 'error';
+    errorMessage.value = 'Sign-in was denied by the provider. Please try again.';
+    return;
   }
 
   if (code && state) {
-    await handleCallback(code, state)
-    return
+    await handleCallback(code, state);
+    return;
   }
 
   if (code || state) {
-    callbackStatus.value = 'error'
-    errorMessage.value = 'Incomplete sign-in response. Please try again.'
-    return
+    callbackStatus.value = 'error';
+    errorMessage.value = 'Incomplete sign-in response. Please try again.';
+    return;
   }
 
-  await loadProviders()
-})
+  await loadProviders();
+});
 </script>
 
 <style scoped>

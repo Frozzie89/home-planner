@@ -1,0 +1,8 @@
+dist/
+node_modules/
+public/
+Dockerfile
+nginx.conf
+*.min.js
+playwright-report/
+test-results/

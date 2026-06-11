@@ -14,8 +14,8 @@ const CURRENCY_LOCALE: Record<string, string> = {
   SEK: 'sv-SE',
   SGD: 'en-SG',
   USD: 'en-US',
-}
+};
 
 export function getCurrencyLocale(currency: string): string {
-  return CURRENCY_LOCALE[currency] ?? 'en-US'
+  return CURRENCY_LOCALE[currency] ?? 'en-US';
 }

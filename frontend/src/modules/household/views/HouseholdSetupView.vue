@@ -43,14 +43,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
-import Button from 'primevue/button'
-import { pb } from '@/shared/lib/pocketbase'
-import { useAuthStore } from '@/shared/stores/auth'
-import { useHouseholdStore } from '@/modules/household/stores/household'
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import InputText from 'primevue/inputtext';
+import Select from 'primevue/select';
+import Button from 'primevue/button';
+import { pb } from '@/shared/lib/pocketbase';
+import { useAuthStore } from '@/shared/stores/auth';
+import { useHouseholdStore } from '@/modules/household/stores/household';
 
 const CURRENCY_OPTIONS = [
   { code: 'AUD', label: 'AUD — Australian Dollar' },
@@ -65,53 +65,53 @@ const CURRENCY_OPTIONS = [
   { code: 'SEK', label: 'SEK — Swedish Krona' },
   { code: 'SGD', label: 'SGD — Singapore Dollar' },
   { code: 'USD', label: 'USD — US Dollar' },
-]
+];
 
-const router = useRouter()
-const authStore = useAuthStore()
-const householdStore = useHouseholdStore()
+const router = useRouter();
+const authStore = useAuthStore();
+const householdStore = useHouseholdStore();
 
-const householdName = ref('')
-const selectedCurrency = ref('EUR')
-const nameError = ref('')
-const createStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
+const householdName = ref('');
+const selectedCurrency = ref('EUR');
+const nameError = ref('');
+const createStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
 
-const isFormValid = computed(() => householdName.value.trim() !== '')
+const isFormValid = computed(() => householdName.value.trim() !== '');
 
 function validateName() {
-  nameError.value = householdName.value.trim() === '' ? 'Household name is required' : ''
+  nameError.value = householdName.value.trim() === '' ? 'Household name is required' : '';
 }
 
 async function handleSubmit() {
-  if (createStatus.value === 'loading') return
-  validateName()
-  if (!isFormValid.value) return
+  if (createStatus.value === 'loading') return;
+  validateName();
+  if (!isFormValid.value) return;
 
-  createStatus.value = 'loading'
+  createStatus.value = 'loading';
   try {
     const household = await pb.collection('households').create({
       name: householdName.value.trim(),
       currency: selectedCurrency.value,
       split_ratios: {},
       reminder_day: 'Monday',
-    })
+    });
 
     const setupResult = await pb.send<{ memberId: string }>('/api/household/complete-setup', {
       method: 'POST',
       body: { household_id: household.id },
-    })
+    });
 
     if (!setupResult?.memberId) {
-      throw new Error('Setup hook returned no memberId')
+      throw new Error('Setup hook returned no memberId');
     }
 
     await pb.collection('households').update(household.id, {
       split_ratios: { [setupResult.memberId]: 100 },
-    })
+    });
 
-    authStore.householdId = household.id
-    authStore.role = 'admin'
-    authStore.memberId = setupResult.memberId
+    authStore.householdId = household.id;
+    authStore.role = 'admin';
+    authStore.memberId = setupResult.memberId;
 
     householdStore.populate({
       id: household.id,
@@ -119,12 +119,12 @@ async function handleSubmit() {
       currency: household.currency,
       split_ratios: { [setupResult.memberId]: 100 },
       reminder_day: household.reminder_day,
-    })
+    });
 
-    createStatus.value = 'success'
-    await router.push('/finances')
+    createStatus.value = 'success';
+    await router.push('/finances');
   } catch {
-    createStatus.value = 'error'
+    createStatus.value = 'error';
   }
 }
 </script>

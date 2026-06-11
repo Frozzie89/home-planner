@@ -1,12 +1,12 @@
-import { createRouter, createWebHistory, RouterView } from 'vue-router'
-import { useAuthStore } from '@/shared/stores/auth'
-import { useHouseholdStore } from '@/modules/household/stores/household'
-import { pb } from '@/shared/lib/pocketbase'
+import { createRouter, createWebHistory, RouterView } from 'vue-router';
+import { useAuthStore } from '@/shared/stores/auth';
+import { useHouseholdStore } from '@/modules/household/stores/household';
+import { pb } from '@/shared/lib/pocketbase';
 
 declare module 'vue-router' {
   interface RouteMeta {
-    public?: boolean
-    shellExcluded?: boolean
+    public?: boolean;
+    shellExcluded?: boolean;
   }
 }
 
@@ -71,19 +71,19 @@ const router = createRouter({
       redirect: '/',
     },
   ],
-})
+});
 
 router.beforeEach(async (to) => {
-  const authStore = useAuthStore()
-  const householdStore = useHouseholdStore()
+  const authStore = useAuthStore();
+  const householdStore = useHouseholdStore();
 
   if (authStore.initStatus !== 'success') {
-    await authStore.init()
+    await authStore.init();
   }
 
   if (authStore.householdId && !householdStore.id) {
     try {
-      await householdStore.load(authStore.householdId)
+      await householdStore.load(authStore.householdId);
     } catch {
       // Non-critical — household name in nav bar stays empty if the fetch fails
     }
@@ -91,27 +91,27 @@ router.beforeEach(async (to) => {
 
   if (to.meta.public) {
     // Invite-accept route must always be reachable so authenticated users can join a household
-    if (to.name === 'invite-accept') return true
+    if (to.name === 'invite-accept') return true;
     if (pb.authStore.isValid) {
-      return authStore.householdId ? { path: '/finances' } : { path: '/setup' }
+      return authStore.householdId ? { path: '/finances' } : { path: '/setup' };
     }
-    return true
+    return true;
   }
 
   if (!pb.authStore.isValid) {
-    return { path: '/auth' }
+    return { path: '/auth' };
   }
 
   if (!authStore.householdId && to.path !== '/setup') {
-    return { path: '/setup' }
+    return { path: '/setup' };
   }
 
   // Admin-only route guard
   if (to.path === '/settings' && authStore.role !== 'admin') {
-    return { path: '/finances' }
+    return { path: '/finances' };
   }
 
-  return true
-})
+  return true;
+});
 
-export default router
+export default router;

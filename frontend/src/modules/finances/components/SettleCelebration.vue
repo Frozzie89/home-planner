@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
-  active: boolean
-  otherMemberName: string
-}>()
+  active: boolean;
+  otherMemberName: string;
+}>();
 
-const announcement = ref('')
+const announcement = ref('');
 
-watch(() => props.active, (isActive) => {
-  announcement.value = isActive ? `Balance settled with ${props.otherMemberName}` : ''
-})
+watch(
+  () => props.active,
+  (isActive) => {
+    announcement.value = isActive ? `Balance settled with ${props.otherMemberName}` : '';
+  }
+);
 </script>
 
 <template>

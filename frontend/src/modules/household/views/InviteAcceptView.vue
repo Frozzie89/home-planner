@@ -6,7 +6,9 @@
 
     <div v-else-if="viewState === 'valid'" class="invite-valid">
       <h1>You're invited!</h1>
-      <p class="invite-household">Join <strong>{{ householdName }}</strong></p>
+      <p class="invite-household">
+        Join <strong>{{ householdName }}</strong>
+      </p>
       <button
         v-for="provider in providers"
         :key="provider.name"
@@ -31,81 +33,87 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { pb } from '@/shared/lib/pocketbase'
-import { useAuthStore } from '@/shared/stores/auth'
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { pb } from '@/shared/lib/pocketbase';
+import { useAuthStore } from '@/shared/stores/auth';
 
 interface OAuth2Provider {
-  name: string
-  state: string
-  codeVerifier: string
-  authURL: string
+  name: string;
+  state: string;
+  codeVerifier: string;
+  authURL: string;
 }
 
-const route = useRoute()
-const authStore = useAuthStore()
+const route = useRoute();
+const authStore = useAuthStore();
 
-const viewState = ref<'validating' | 'valid' | 'invalid'>('validating')
-const householdName = ref('')
-const providers = ref<OAuth2Provider[]>([])
-const providersStatus = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
+const viewState = ref<'validating' | 'valid' | 'invalid'>('validating');
+const householdName = ref('');
+const providers = ref<OAuth2Provider[]>([]);
+const providersStatus = ref<'idle' | 'loading' | 'success' | 'error'>('idle');
 
 function capitalise(name: string): string {
-  return name.charAt(0).toUpperCase() + name.slice(1)
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 async function loadProviders() {
-  providersStatus.value = 'loading'
+  providersStatus.value = 'loading';
   try {
-    const authMethods = await pb.collection('users').listAuthMethods()
-    providers.value = authMethods.oauth2.providers
-    providersStatus.value = 'success'
+    const authMethods = await pb.collection('users').listAuthMethods();
+    providers.value = authMethods.oauth2.providers;
+    providersStatus.value = 'success';
   } catch {
-    providersStatus.value = 'error'
+    providersStatus.value = 'error';
   }
 }
 
 async function validateToken(token: string) {
   try {
-    const result = await pb.send('/api/invite/' + token, { method: 'GET' }) as { householdName: string }
-    householdName.value = result.householdName
-    viewState.value = 'valid'
-    await loadProviders()
+    const result = (await pb.send('/api/invite/' + token, { method: 'GET' })) as {
+      householdName: string;
+    };
+    householdName.value = result.householdName;
+    viewState.value = 'valid';
+    await loadProviders();
   } catch {
-    viewState.value = 'invalid'
+    viewState.value = 'invalid';
   }
 }
 
 function signIn(provider: OAuth2Provider) {
-  const token = route.params['token'] as string
+  const token = route.params['token'] as string;
   try {
-    localStorage.setItem('pending_invite_token', token)
+    localStorage.setItem('pending_invite_token', token);
     sessionStorage.setItem(
       'oauth_provider',
-      JSON.stringify({ name: provider.name, state: provider.state, codeVerifier: provider.codeVerifier })
-    )
+      JSON.stringify({
+        name: provider.name,
+        state: provider.state,
+        codeVerifier: provider.codeVerifier,
+      })
+    );
   } catch {
     // storage unavailable — proceed anyway, invite acceptance will fail gracefully
   }
-  const redirectUrl = `${window.location.origin}/auth`
-  window.location.href = `${provider.authURL}${encodeURIComponent(redirectUrl)}`
+  const redirectUrl = `${window.location.origin}/auth`;
+  window.location.href = `${provider.authURL}${encodeURIComponent(redirectUrl)}`;
 }
 
 onMounted(async () => {
-  const token = route.params['token'] as string
+  const token = route.params['token'] as string;
   if (!token) {
-    viewState.value = 'invalid'
-    return
+    viewState.value = 'invalid';
+    return;
   }
   // Clear any existing session before the invite flow starts. This ensures the
   // router guard on /auth won't redirect away from the OAuth callback, and that
   // the OAuth exchange authenticates the invitee rather than the current user.
   if (pb.authStore.isValid) {
-    authStore.logout()
+    authStore.logout();
   }
-  await validateToken(token)
-})
+  await validateToken(token);
+});
 </script>
 
 <style scoped>
