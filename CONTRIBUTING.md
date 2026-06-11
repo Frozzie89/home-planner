@@ -22,8 +22,6 @@ Use the [bug report template](../../issues/new?template=bug_report.md). Please i
 
 Use the [feature request template](../../issues/new?template=feature_request.md). Describe the problem you're trying to solve, not just the solution you have in mind.
 
----
-
 ## For future contributors
 
 When this project opens up to contributions, the following will apply.
@@ -92,8 +90,6 @@ npm run format:check
 The CI pipeline runs `format:check` on every push and pull request. Unformatted code will fail the build.
 
 Key Prettier settings (see `frontend/.prettierrc.json`): single quotes, semicolons, 100-character print width, 2-space indent, trailing commas where valid in ES5.
-
----
 
 ## Code of Conduct
 
