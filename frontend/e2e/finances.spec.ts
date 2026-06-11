@@ -27,7 +27,7 @@ test('balance card shows zero state when no expenses exist', async ({ page }) =>
   })
 
   await test.step('assert zero-fresh state', async () => {
-    await expect(page.getByText('No expenses logged this period')).toBeVisible()
+    await expect(page.getByText('All settled')).toBeVisible()
     await expect(page.getByText('Nothing here yet — add your first expense')).toBeVisible()
   })
 })

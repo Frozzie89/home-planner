@@ -606,6 +606,67 @@ describe('applySSEEvent', () => {
   })
 })
 
+describe('settleUp', () => {
+  const EXPENSE_A: Expense = {
+    id: 'exp-a',
+    household_id: 'hh-1',
+    member_id: 'member-b',
+    title: 'Dinner',
+    amount: 8000,
+    portion: 50,
+    date: '2026-06-09 00:00:00.000Z',
+    created: '2026-06-09T00:00:00Z',
+    updated: '2026-06-09T00:00:00Z',
+  }
+
+  it('isSettledPair returns false before settle-up', () => {
+    const store = useFinancesStore()
+    expect(store.isSettledPair('member-b')).toBe(false)
+  })
+
+  it('settleUp marks a pair as settled; isSettledPair returns true', () => {
+    const store = useFinancesStore()
+    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' })
+    expect(store.isSettledPair('member-b')).toBe(true)
+  })
+
+  it('bilateralBalances returns 0 for a settled pair', () => {
+    const store = useFinancesStore()
+    store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')]
+    store.expenses = [EXPENSE_A]
+    expect(store.bilateralBalances[0]!.amount).not.toBe(0)
+    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' })
+    expect(store.bilateralBalances[0]!.amount).toBe(0)
+  })
+
+  it('addExpense clears settled pairs', async () => {
+    const store = useFinancesStore()
+    store.loadStatus = 'success'
+    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' })
+    expect(store.isSettledPair('member-b')).toBe(true)
+
+    mockCreateFn.mockResolvedValueOnce(makeExpense({ id: 'new-id' }))
+    await store.addExpense({ title: 'Lunch', amount: 2000, portion: 50, date: '2026-06-10 00:00:00.000Z' })
+    expect(store.isSettledPair('member-b')).toBe(false)
+  })
+
+  it('applySSEEvent create action clears settled pairs', () => {
+    const store = useFinancesStore()
+    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' })
+    expect(store.isSettledPair('member-b')).toBe(true)
+    store.applySSEEvent('create', EXPENSE_A)
+    expect(store.isSettledPair('member-b')).toBe(false)
+  })
+
+  it('reset clears settled pairs', () => {
+    const store = useFinancesStore()
+    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' })
+    expect(store.isSettledPair('member-b')).toBe(true)
+    store.reset()
+    expect(store.isSettledPair('member-b')).toBe(false)
+  })
+})
+
 describe('deleteExpense', () => {
   it('immediately removes the expense optimistically', async () => {
     const store = useFinancesStore()

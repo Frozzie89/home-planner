@@ -92,7 +92,7 @@ test('balance updates when SSE create event is injected', async ({ page }) => {
     await page.goto('/finances')
     await page.waitForLoadState('networkidle')
     await expect(page.getByText('Groceries')).toBeVisible()
-    initialAriaLabel = await page.locator('.balance-amount').getAttribute('aria-label') ?? ''
+    initialAriaLabel = await page.locator('.slim-amt').getAttribute('aria-label') ?? ''
   })
 
   await test.step('inject SSE create event for Bob\'s expense', async () => {
@@ -100,7 +100,7 @@ test('balance updates when SSE create event is injected', async ({ page }) => {
   })
 
   await test.step('balance aria-label reflects the updated computed amount', async () => {
-    await expect(page.locator('.balance-amount')).not.toHaveAttribute('aria-label', initialAriaLabel)
+    await expect(page.locator('.slim-amt')).not.toHaveAttribute('aria-label', initialAriaLabel)
   })
 })
 

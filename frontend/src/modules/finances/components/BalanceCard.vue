@@ -9,16 +9,13 @@ const props = defineProps<{
   balance: Balance
   otherMember: MemberRecord
   currency: string
-  settled?: boolean
-  hasExpenses?: boolean
-  headerLabel?: string  // "YOUR BALANCE" for single-pair, "WITH [NAME]" for multi-pair
 }>()
+
+const emit = defineEmits<{ 'settle-up': [] }>()
 
 const isPositive = computed(() => props.balance.amount > 0)
 const isNegative = computed(() => props.balance.amount < 0)
 const isZero = computed(() => props.balance.amount === 0)
-const isZeroFresh = computed(() => isZero.value && !props.settled && !props.hasExpenses)
-const isZeroSettled = computed(() => isZero.value && props.settled)
 
 // ── Animated display amount ───────────────────────────────────────────────────
 
@@ -42,7 +39,7 @@ watch(() => props.balance.amount, (newVal) => {
 
   function step(now: number) {
     const t = Math.min((now - start) / duration, 1)
-    const eased = 1 - Math.pow(1 - t, 2) // ease-out quadratic
+    const eased = 1 - Math.pow(1 - t, 2)
     displayedAmount.value = Math.round(from + (to - from) * eased)
     if (t < 1) {
       rafId = requestAnimationFrame(step)
@@ -62,14 +59,27 @@ onBeforeUnmount(() => {
 
 const otherName = computed(() => getMemberName(props.otherMember))
 
-const header = computed(() =>
-  props.headerLabel ?? `WITH ${otherName.value.toUpperCase()}`
-)
+const directionText = computed(() => {
+  if (isPositive.value) return `${otherName.value} owes you`
+  if (isNegative.value) return `You owe ${otherName.value}`
+  return 'All settled'
+})
 
-// Split amount into prefix (leading currency/literal), intPart (integer+groups),
-// frac (decimal separator + fraction digits), and suffix (trailing currency/literal).
-// This handles all locale orderings: "€45.80", "45.80 €", "CHF 45.80", "45.80 CHF".
-// Uses displayedAmount.value for the animated integer; sign/color use props.balance.amount.
+// aria-label uses the real (non-animated) amount for correctness
+const formattedAmount = computed(() => {
+  const fmt = new Intl.NumberFormat(getCurrencyLocale(props.currency), {
+    style: 'currency',
+    currency: props.currency,
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  const abs = fmt.format(Math.abs(props.balance.amount) / 100)
+  const sign = isPositive.value ? '+' : isNegative.value ? '−' : ''
+  return `${sign}${abs}`
+})
+
+// Split amount into parts for animated integer display
 const amountParts = computed(() => {
   const fmt = new Intl.NumberFormat(getCurrencyLocale(props.currency), {
     style: 'currency',
@@ -79,10 +89,10 @@ const amountParts = computed(() => {
     maximumFractionDigits: 2,
   })
   const parts = fmt.formatToParts(Math.abs(displayedAmount.value) / 100)
-  let prefix = ''   // leading currency + literals (before integer)
-  let intPart = ''  // integer digits + group separators
-  let frac = ''     // decimal separator + fraction digits
-  let suffix = ''   // trailing currency + literals (after fraction)
+  let prefix = ''
+  let intPart = ''
+  let frac = ''
+  let suffix = ''
 
   type Phase = 'pre' | 'int' | 'frac' | 'post'
   let phase: Phase = 'pre'
@@ -107,118 +117,172 @@ const amountParts = computed(() => {
   return { sign, prefix, intPart, frac, suffix }
 })
 
-// aria-label uses the real (non-animated) amount for correctness
-const formattedAmount = computed(() => {
-  const fmt = new Intl.NumberFormat(getCurrencyLocale(props.currency), {
-    style: 'currency',
-    currency: props.currency,
-    currencyDisplay: 'narrowSymbol',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-  const abs = fmt.format(Math.abs(props.balance.amount) / 100)
-  const sign = isPositive.value ? '+' : isNegative.value ? '−' : ''
-  return `${sign}${abs}`
-})
-
-const sublabel = computed(() => {
-  if (isPositive.value) return `${otherName.value} owes you`
-  if (isNegative.value) return `You owe ${otherName.value}`
-  if (isZeroFresh.value) return 'No expenses logged this period'
-  if (isZeroSettled.value) return 'All settled. Nothing owed.'
-  return ''
-})
-
-const ariaLabel = computed(() => {
-  if (isZeroFresh.value || isZeroSettled.value) return `Balance with ${otherName.value}: ${formattedAmount.value}`
-  return `Current balance: ${formattedAmount.value}, ${sublabel.value}`
-})
-
 const cardClass = computed(() => ({
-  'state-settled': isZeroSettled.value,
+  'state-nonzero': !isZero.value,
+  'state-zero': isZero.value,
 }))
 
 const amountClass = computed(() => ({
-  'state-positive': isPositive.value,
-  'state-negative': isNegative.value,
-  'state-zero': isZero.value,
+  'amt-positive': isPositive.value,
+  'amt-negative': isNegative.value,
+  'amt-zero': isZero.value,
 }))
 </script>
 
 <template>
-  <div class="balance-card" :class="cardClass" role="region" :aria-label="`Balance with ${otherName}`">
-    <div class="balance-header-label">{{ header }}</div>
-    <div class="balance-amount" :class="amountClass" aria-live="polite" :aria-label="ariaLabel">
-      <span class="amount-main">{{ amountParts.sign }}{{ amountParts.prefix }}{{ amountParts.intPart }}</span><span class="amount-frac">{{ amountParts.frac }}</span><span v-if="amountParts.suffix" class="amount-main">{{ amountParts.suffix }}</span>
+  <div
+    class="slim-card"
+    :class="cardClass"
+    role="region"
+    :aria-label="`Balance with ${otherName}`"
+  >
+    <div class="slim-info">
+      <div class="slim-name">{{ otherName }}</div>
+      <div class="slim-dir" :class="{ 'dir-settled': isZero }">{{ directionText }}</div>
     </div>
-    <div class="balance-sublabel">
-      <span v-if="isZeroSettled" class="settled-badge" aria-hidden="true">✓</span>
-      {{ sublabel }}
+    <div
+      class="slim-amt"
+      :class="amountClass"
+      aria-live="polite"
+      :aria-label="formattedAmount"
+    >
+      <span class="amt-main">{{ amountParts.sign }}{{ amountParts.prefix }}{{ amountParts.intPart }}</span><span class="amt-frac">{{ amountParts.frac }}</span><span v-if="amountParts.suffix" class="amt-main">{{ amountParts.suffix }}</span>
+    </div>
+    <div class="slim-action">
+      <button
+        v-if="!isZero"
+        type="button"
+        class="btn-settle"
+        @click="emit('settle-up')"
+      >
+        Settle up
+      </button>
+      <div v-else class="settled-check" aria-hidden="true">✓</div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Matches .pref-card from ProfileView / HouseholdSettingsView */
-.balance-card {
+.slim-card {
   background-color: var(--p-surface-card);
   border: 1px solid var(--p-surface-border);
   border-radius: 10px;
   padding: var(--space-3);
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
+  @media (prefers-reduced-motion: no-preference) {
+    transition: background-color 300ms ease-out;
+  }
 }
 
-.balance-card.state-settled {
-  background-color: #FDF3DC; /* golden wash — design spec exact hex for settled state */
+.slim-card.state-nonzero {
+  border-left: 4px solid var(--color-accent, #D4845A);
 }
 
-/* Matches .field-label-upper from ProfileView / HouseholdSettingsView */
-.balance-header-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin: 0;
+.slim-card.state-zero {
+  background-color: #FDF3DC;
 }
 
-.balance-amount {
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-primary);
+.slim-info {
+  flex: 1;
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .slim-card {
+    flex-wrap: wrap;
+  }
+
+  .slim-info {
+    flex: none;
+    width: 100%;
+  }
+}
+
+.slim-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slim-dir {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.slim-dir.dir-settled {
+  color: #2d6b4a;
+  font-weight: 500;
+}
+
+.slim-amt {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
   @media (prefers-reduced-motion: no-preference) {
     transition: color 300ms ease-out;
   }
 }
 
-.balance-amount.state-positive { color: var(--color-balance-positive); }
-.balance-amount.state-negative { color: var(--color-balance-negative); }
-.balance-amount.state-zero     { color: var(--color-text-secondary); }
-
-.amount-main {
-  font-size: 3.5rem;
-  font-weight: 700;
-  line-height: 1.1;
+.slim-action {
+  flex-shrink: 0;
+  width: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.amount-frac {
-  font-size: 1.75rem;
+.slim-amt.amt-positive { color: var(--color-balance-positive); }
+.slim-amt.amt-negative { color: var(--color-balance-negative); }
+.slim-amt.amt-zero     { color: var(--color-text-secondary); }
+
+.amt-main {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.amt-frac {
+  font-size: 1.5rem;
   font-weight: 600;
 }
 
-.balance-sublabel {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
+.btn-settle {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  background-color: transparent;
+  color: #9B4E2A;
+  border: 2px solid var(--color-accent, #D4845A);
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
 }
 
-.settled-badge {
-  color: #D97706;
+.btn-settle:hover {
+  opacity: 0.9;
+}
+
+.settled-check {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #E8A838;
+  color: #E8A838;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
   font-weight: 700;
+  opacity: 0.8;
 }
 </style>
