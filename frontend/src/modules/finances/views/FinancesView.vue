@@ -4,12 +4,12 @@ import { useFinancesStore } from '@/modules/finances/stores/finances'
 import { useHouseholdStore } from '@/modules/household/stores/household'
 import { useAuthStore } from '@/shared/stores/auth'
 import { pb } from '@/shared/lib/pocketbase'
+import { getCurrencyLocale } from '@/shared/lib/currencyHelpers'
 import BalanceCard from '@/modules/finances/components/BalanceCard.vue'
 import AddExpenseSheet from '@/modules/finances/components/AddExpenseSheet.vue'
 import ExpenseList from '@/modules/finances/components/ExpenseList.vue'
 import EditExpenseSheet from '@/modules/finances/components/EditExpenseSheet.vue'
 import BottomSheet from '@/shared/components/BottomSheet.vue'
-import SettleUpCard from '@/modules/finances/components/SettleUpCard.vue'
 import SettleCelebration from '@/modules/finances/components/SettleCelebration.vue'
 import Skeleton from 'primevue/skeleton'
 import { getMemberName } from '@/shared/lib/memberHelpers'
@@ -44,8 +44,6 @@ const memberMap = computed(() => {
   for (const m of financesStore.members) map.set(m.id, m)
   return map
 })
-
-const isSinglePair = computed(() => financesStore.bilateralBalances.length === 1)
 
 const showAddSheet = ref(false)
 
@@ -121,6 +119,36 @@ function handleSettleConfirm() {
   })
   settlingBalance.value = null
 }
+
+// ── Summary banner ───────────────────────────────────────────────────────────
+
+const netAmount = computed(() =>
+  financesStore.bilateralBalances.reduce((sum, b) => sum + b.amount, 0)
+)
+
+const nonZeroBalanceCount = computed(() =>
+  financesStore.bilateralBalances.filter(b => b.amount !== 0).length
+)
+
+const showSummaryBanner = computed(() =>
+  nonZeroBalanceCount.value > 1 && netAmount.value !== 0
+)
+
+const summaryLabel = computed(() =>
+  netAmount.value > 0 ? 'Overall, you are owed' : 'Overall, you owe'
+)
+
+const formattedNetAmount = computed(() => {
+  const fmt = new Intl.NumberFormat(getCurrencyLocale(householdStore.currency), {
+    style: 'currency',
+    currency: householdStore.currency,
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  const abs = fmt.format(Math.abs(netAmount.value) / 100)
+  return netAmount.value > 0 ? `+${abs}` : `−${abs}` // U+2212 minus sign
+})
 </script>
 
 <template>
@@ -185,45 +213,38 @@ function handleSettleConfirm() {
 
     <!-- Balance cards or skeleton -->
     <template v-if="financesStore.loadStatus === 'idle' || financesStore.loadStatus === 'loading'">
-      <Skeleton height="96px" border-radius="12px" />
+      <Skeleton height="72px" border-radius="12px" />
     </template>
     <template v-else-if="financesStore.loadStatus === 'error'">
       <p class="load-error">Could not load balances. Please refresh to try again.</p>
     </template>
     <template v-else>
+
+
       <template v-for="balance in financesStore.bilateralBalances" :key="balance.member_b_id">
         <BalanceCard
           v-if="memberMap.get(balance.member_b_id)"
           :balance="balance"
           :other-member="memberMap.get(balance.member_b_id)!"
           :currency="householdStore.currency"
-          :settled="financesStore.isSettledPair(balance.member_b_id)"
-          :has-expenses="financesStore.expenses.length > 0"
-          :header-label="isSinglePair ? 'YOUR BALANCE' : undefined"
+          @settle-up="openSettleConfirm(balance)"
         />
-        <Transition name="settle-card">
-          <SettleUpCard
-            v-if="balance.amount !== 0 && memberMap.get(balance.member_b_id)"
-            :balance="balance"
-            :other-member="memberMap.get(balance.member_b_id)!"
-            :currency="householdStore.currency"
-            @settle-up="openSettleConfirm(balance)"
-          />
-        </Transition>
-        <Transition name="settled-pill">
-          <div
-            v-if="financesStore.isSettledPair(balance.member_b_id)"
-            class="settled-pill"
-          >
-            ✓ Settled
-          </div>
-        </Transition>
         <SettleCelebration
           v-if="memberMap.get(balance.member_b_id)"
           :active="financesStore.isSettledPair(balance.member_b_id)"
           :other-member-name="getMemberName(memberMap.get(balance.member_b_id)!)"
         />
       </template>
+
+      <!-- Summary banner -->
+      <div v-if="showSummaryBanner" class="summary-banner">
+        <span class="summary-label">{{ summaryLabel }}</span>
+        <span
+          class="summary-amount"
+          :class="netAmount > 0 ? 'net-positive' : 'net-negative'"
+        >{{ formattedNetAmount }}</span>
+      </div>
+      
       <template v-if="financesStore.bilateralBalances.length === 0">
         <p class="empty-state">Add another member to see balances here.</p>
       </template>
@@ -398,43 +419,6 @@ function handleSettleConfirm() {
   opacity: 0.9;
 }
 
-/* SettleUpCard fade-out */
-@media (prefers-reduced-motion: no-preference) {
-  .settle-card-leave-active {
-    transition: opacity 200ms ease-out;
-  }
-  .settle-card-leave-to {
-    opacity: 0;
-  }
-}
-
-/* Settled pill — below BalanceCard */
-.settled-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  align-self: flex-start;
-  padding: 4px var(--space-2);
-  border: 1px solid var(--color-balance-positive, #4A9068);
-  border-radius: 20px;
-  color: var(--color-balance-positive, #4A9068);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  background: transparent;
-}
-
-/* Settled pill fade-in — 500ms delay so it appears after the card bg transition */
-.settled-pill-enter-active {
-  @media (prefers-reduced-motion: no-preference) {
-    transition: opacity 200ms ease-out 500ms;
-  }
-}
-.settled-pill-enter-from {
-  @media (prefers-reduced-motion: no-preference) {
-    opacity: 0;
-  }
-}
-
 .settle-confirm-text {
   color: var(--color-text-primary);
   margin: 0;
@@ -456,6 +440,37 @@ function handleSettleConfirm() {
 
 .btn-settle:hover {
   opacity: 0.9;
+}
+
+/* Summary banner */
+.summary-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--p-surface-card);
+  border: 1px solid var(--p-surface-border);
+  border-radius: 10px;
+  gap: var(--space-2);
+}
+
+.summary-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.summary-amount {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-amount.net-positive {
+  color: var(--color-balance-positive);
+}
+
+.summary-amount.net-negative {
+  color: var(--color-balance-negative);
 }
 
 @media (min-width: 1024px) {

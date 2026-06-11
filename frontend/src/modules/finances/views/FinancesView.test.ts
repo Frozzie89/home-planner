@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import FinancesView from './FinancesView.vue'
-import type { Expense } from '@/modules/finances/types'
+import type { Expense, Balance } from '@/modules/finances/types'
 
 const {
   mockSubscribe,
@@ -31,20 +31,7 @@ vi.mock('@/shared/lib/pocketbase', () => ({
 }))
 
 vi.mock('@/modules/finances/stores/finances', () => ({
-  useFinancesStore: vi.fn(() => ({
-    load: mockLoad,
-    applySSEEvent: mockApplySSEEvent,
-    loadStatus: 'success',
-    expenses: [],
-    bilateralBalances: [],
-    members: [],
-    addExpenseStatus: 'idle',
-    updateExpenseStatus: 'idle',
-    deleteExpenseStatus: 'idle',
-    settleUp: mockSettleUp,
-    isSettledPair: mockIsSettledPair,
-    settledPairs: ref(new Set()),
-  })),
+  useFinancesStore: vi.fn(),
 }))
 
 vi.mock('@/shared/stores/auth', () => ({
@@ -62,21 +49,39 @@ vi.mock('@/modules/household/stores/household', () => ({
   })),
 }))
 
+// Import after vi.mock so we get the mocked version
+import { useFinancesStore } from '@/modules/finances/stores/finances'
+
+function makeStoreState(bilateralBalances: Balance[] = []) {
+  return {
+    load: mockLoad,
+    applySSEEvent: mockApplySSEEvent,
+    loadStatus: 'success' as const,
+    expenses: [],
+    bilateralBalances,
+    members: [],
+    addExpenseStatus: 'idle' as const,
+    updateExpenseStatus: 'idle' as const,
+    deleteExpenseStatus: 'idle' as const,
+    settleUp: mockSettleUp,
+    isSettledPair: mockIsSettledPair,
+    settledPairs: ref(new Set<string>()),
+  }
+}
+
+const STUBS = {
+  BalanceCard: true,
+  AddExpenseSheet: true,
+  ExpenseList: true,
+  EditExpenseSheet: true,
+  BottomSheet: true,
+  Skeleton: true,
+  SettleCelebration: true,
+}
+
 function mountView() {
   return mount(FinancesView, {
-    global: {
-      plugins: [createPinia()],
-      stubs: {
-        BalanceCard: true,
-        AddExpenseSheet: true,
-        ExpenseList: true,
-        EditExpenseSheet: true,
-        BottomSheet: true,
-        Skeleton: true,
-        SettleUpCard: true,
-        SettleCelebration: true,
-      },
-    },
+    global: { plugins: [createPinia()], stubs: STUBS },
   })
 }
 
@@ -96,6 +101,7 @@ describe('FinancesView SSE lifecycle', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    vi.mocked(useFinancesStore).mockReturnValue(makeStoreState() as unknown as ReturnType<typeof useFinancesStore>)
   })
 
   it('calls pb.collection("expenses").subscribe("*", ...) on mount', async () => {
@@ -116,7 +122,6 @@ describe('FinancesView SSE lifecycle', () => {
   it('calls pb.collection("expenses").unsubscribe() on unmount', async () => {
     const wrapper = mountView()
     await wrapper.vm.$nextTick()
-
     wrapper.unmount()
 
     expect(mockUnsubscribe).toHaveBeenCalled()
@@ -140,5 +145,75 @@ describe('FinancesView SSE lifecycle', () => {
     callback({ action: 'delete', record: mockExpense })
 
     expect(mockApplySSEEvent).toHaveBeenCalledWith('delete', mockExpense)
+  })
+})
+
+describe('FinancesView — summary banner', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('hides the banner when there is only 1 bilateral balance (2-person household)', async () => {
+    vi.mocked(useFinancesStore).mockReturnValue(makeStoreState([
+      { member_a_id: 'a', member_b_id: 'b', amount: 1000 },
+    ]) as unknown as ReturnType<typeof useFinancesStore>)
+
+    const wrapper = mountView()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.summary-banner').exists()).toBe(false)
+  })
+
+  it('shows the banner when 2+ non-zero balances and netAmount > 0', async () => {
+    vi.mocked(useFinancesStore).mockReturnValue(makeStoreState([
+      { member_a_id: 'a', member_b_id: 'b', amount: 1750 },
+      { member_a_id: 'a', member_b_id: 'c', amount: -250 },
+    ]) as unknown as ReturnType<typeof useFinancesStore>)
+
+    const wrapper = mountView()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.summary-banner').exists()).toBe(true)
+    expect(wrapper.find('.summary-label').text()).toBe('Overall, you are owed')
+    expect(wrapper.find('.summary-amount').classes()).toContain('net-positive')
+  })
+
+  it('shows the banner when 2+ non-zero balances and netAmount < 0', async () => {
+    vi.mocked(useFinancesStore).mockReturnValue(makeStoreState([
+      { member_a_id: 'a', member_b_id: 'b', amount: -3000 },
+      { member_a_id: 'a', member_b_id: 'c', amount: -500 },
+    ]) as unknown as ReturnType<typeof useFinancesStore>)
+
+    const wrapper = mountView()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.summary-banner').exists()).toBe(true)
+    expect(wrapper.find('.summary-label').text()).toBe('Overall, you owe')
+    expect(wrapper.find('.summary-amount').classes()).toContain('net-negative')
+  })
+
+  it('hides the banner when netAmount is zero even with multiple non-zero balances', async () => {
+    vi.mocked(useFinancesStore).mockReturnValue(makeStoreState([
+      { member_a_id: 'a', member_b_id: 'b', amount: 1000 },
+      { member_a_id: 'a', member_b_id: 'c', amount: -1000 },
+    ]) as unknown as ReturnType<typeof useFinancesStore>)
+
+    const wrapper = mountView()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.summary-banner').exists()).toBe(false)
+  })
+
+  it('hides the banner when all balances are zero', async () => {
+    vi.mocked(useFinancesStore).mockReturnValue(makeStoreState([
+      { member_a_id: 'a', member_b_id: 'b', amount: 0 },
+      { member_a_id: 'a', member_b_id: 'c', amount: 0 },
+    ]) as unknown as ReturnType<typeof useFinancesStore>)
+
+    const wrapper = mountView()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.summary-banner').exists()).toBe(false)
   })
 })
