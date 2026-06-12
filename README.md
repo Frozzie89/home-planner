@@ -53,6 +53,8 @@ Copy `.env.example` to `.env` and adjust as needed. The frontend has its own `fr
 
 ## Local development
 
+A dev container is available for VS Code and GitHub Codespaces (`.devcontainer/`). It installs Node.js, PocketBase 0.27, and the recommended extensions automatically - skip to step 2 below if you use it.
+
 ```sh
 # 1. Download and place the PocketBase binary in the pocketbase/ directory
 
