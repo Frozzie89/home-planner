@@ -109,7 +109,6 @@ describe('bilateralBalances', () => {
   });
 
   it('returns empty array when viewerMemberId is null', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthStore.mockReturnValue({ memberId: null as any, householdId: 'hh-1' });
 
     const store = useFinancesStore();
@@ -157,7 +156,6 @@ describe('bilateralBalances', () => {
 
   it('correctly distributes remainder to the right bilateral pair in 3-member household', () => {
     mockUseHouseholdStore.mockReturnValue({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       split_ratios: { 'member-a': 33, 'member-b': 33, 'member-c': 34 } as any,
       currency: 'EUR',
     });
