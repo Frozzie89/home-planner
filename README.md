@@ -76,4 +76,4 @@ npm run test:e2e      # Playwright smoke tests
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). The project is not yet actively seeking pull requests, but bug reports and feature requests are welcome via [GitHub Issues](../../issues).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports, feature requests, and pull requests are welcome via [GitHub Issues](../../issues).

@@ -1,16 +1,8 @@
 # Contributing to Home Planner
 
-Thank you for your interest in Home Planner.
+Thank you for your interest in Home Planner. Contributions are welcome.
 
-**This project is not yet actively seeking external contributions.** It is in early development and the architecture is still evolving. Pull requests from outside contributors may not be reviewed promptly.
-
-That said, bug reports and feature requests are genuinely welcome. Opening an issue is the best way to contribute right now.
-
-### For external contributors
-
-If you want to submit code, **fork the repository** and open a pull request targeting the `dev` branch of this repo. Direct pushes to `dev` or `main` are not available to non-maintainers. Pull requests to `main` from non-maintainers will not be accepted - `main` is a release-only branch managed by code owners.
-
----
+If you want to submit code, **fork the repository** and open a pull request targeting the `dev` branch. Direct pushes to `dev` or `main` are not available to non-maintainers. Pull requests to `main` from non-maintainers will not be accepted - `main` is a release-only branch managed by code owners.
 
 ## Reporting bugs
 
@@ -26,9 +18,7 @@ Use the [bug report template](../../issues/new?template=bug_report.md). Please i
 
 Use the [feature request template](../../issues/new?template=feature_request.md). Describe the problem you're trying to solve, not just the solution you have in mind.
 
-## For future contributors
-
-When this project opens up to contributions, the following will apply.
+## For contributors
 
 ### Prerequisites
 
