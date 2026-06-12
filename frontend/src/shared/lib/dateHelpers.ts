@@ -1,5 +1,5 @@
 // Returns a PrimeVue DatePicker format string (dd/mm/yy tokens) derived from
-// the browser's locale  - e.g. 'de-CH' -> 'dd.mm.yy', 'en-US' -> 'mm/dd/yy'.
+// the browser's locale - e.g. 'de-CH' -> 'dd.mm.yy', 'en-US' -> 'mm/dd/yy'.
 export function getLocaleDateFormat(locale: string): string {
   const parts = new Intl.DateTimeFormat(locale, {
     year: 'numeric',

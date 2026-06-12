@@ -11,7 +11,7 @@ const { mockToggleTheme, mockInitTheme } = vi.hoisted(() => ({
   mockInitTheme: vi.fn(),
 }));
 
-// Reactive refs at module level  - initialized after imports, before tests run.
+// Reactive refs at module level - initialized after imports, before tests run.
 // The vi.mock factories below close over these by reference; by the time
 // useUiStore() / useAuthStore() are called inside mount(), both refs exist.
 const mockIsDark = ref(false);

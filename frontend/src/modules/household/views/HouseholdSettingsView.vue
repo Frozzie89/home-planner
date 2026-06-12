@@ -151,7 +151,7 @@ async function loadSettings() {
     for (const member of membersList) {
       splitRatioForm.value[member.id] = ratios[member.id] ?? 0;
     }
-    // Single-member: always 100  - InputNumber is disabled; DB may have 0 if never explicitly set
+    // Single-member: always 100 - InputNumber is disabled; DB may have 0 if never explicitly set
     if (membersList.length === 1 && membersList[0]) {
       splitRatioForm.value[membersList[0].id] = 100;
     }
@@ -319,7 +319,7 @@ async function handleInviteOpen() {
       token = existing['token'];
     } catch (e: any) {
       if (e?.status !== 404) throw e;
-      // No existing invite  - create one
+      // No existing invite - create one
       const record = await pb.collection('invitations').create<{ token: string }>({
         household_id: authStore.householdId,
       });

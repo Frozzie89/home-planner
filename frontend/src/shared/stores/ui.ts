@@ -34,7 +34,7 @@ export const useUiStore = defineStore('ui', () => {
     try {
       localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light');
     } catch {
-      // localStorage unavailable  - theme toggle still works for this session
+      // localStorage unavailable - theme toggle still works for this session
     }
   }
 

@@ -166,19 +166,19 @@ async function handleCallback(code: string, state: string) {
     });
     if (existsResponse.exists) {
       // Path 3: household exists but this user has no membership -> reject at auth layer.
-      // Delete the orphaned user record before clearing the session  - the token is still
+      // Delete the orphaned user record before clearing the session - the token is still
       // valid here and the default deleteRule allows self-delete.
       const orphanId = pb.authStore.record?.id;
       if (orphanId) {
         try {
           await pb.collection('users').delete(orphanId);
         } catch {
-          // best-effort  - proceed with logout regardless
+          // best-effort - proceed with logout regardless
         }
       }
       authStore.logout();
       router.replace('/auth?error=not_registered');
-      // router.replace won't re-trigger onMounted  - we're already on /auth, so set state directly
+      // router.replace won't re-trigger onMounted - we're already on /auth, so set state directly
       callbackStatus.value = 'idle';
       notRegisteredMessage.value =
         "This account isn't linked to this household. You'll need an invitation link to join.";
@@ -203,7 +203,7 @@ onMounted(async () => {
   if (error === 'not_registered') {
     notRegisteredMessage.value =
       "This account isn't linked to this household. You'll need an invitation link to join.";
-    // Fall through to loadProviders()  - sign-in form shown with message
+    // Fall through to loadProviders() - sign-in form shown with message
   } else if (error) {
     callbackStatus.value = 'error';
     errorMessage.value = 'Sign-in was denied by the provider. Please try again.';

@@ -115,7 +115,7 @@ const amountParts = computed(() => {
     }
   }
 
-  // Sign and color use the real (non-animated) amount  - never flip mid-animation
+  // Sign and color use the real (non-animated) amount - never flip mid-animation
   const sign = isPositive.value ? '+' : isNegative.value ? '−' : ''; // U+2212 minus sign
   return { sign, prefix, intPart, frac, suffix };
 });

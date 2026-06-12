@@ -201,7 +201,7 @@ describe('HouseholdSettingsView', () => {
     mockGetOne.mockResolvedValue({ ...MOCK_HOUSEHOLD });
     mockGetFullList.mockReset();
     mockGetFullList.mockResolvedValue([...MOCK_MEMBERS]);
-    // Default: no existing invite (404)  - handleInviteOpen falls through to create
+    // Default: no existing invite (404) - handleInviteOpen falls through to create
     mockGetFirstListItem.mockReset();
     mockGetFirstListItem.mockRejectedValue({ status: 404 });
     mockUpdate.mockReset();
@@ -346,7 +346,7 @@ describe('HouseholdSettingsView', () => {
         summary: "Couldn't save — try again",
       })
     );
-    // Form state preserved  - name still shows the updated value
+    // Form state preserved - name still shows the updated value
     const nameInput = wrapper.find('#household-name');
     expect((nameInput.element as HTMLInputElement).value).toBe('Updated Name');
   });
@@ -448,7 +448,7 @@ describe('HouseholdSettingsView', () => {
   it('@remove event from MemberList opens remove confirmation BottomSheet', async () => {
     const wrapper = mountView();
     await flushPromises();
-    // member-2 is a non-admin member  - remove is not blocked
+    // member-2 is a non-admin member - remove is not blocked
     const removeButtons = wrapper.findAll('.remove-btn-stub');
     const member2RemoveBtn = removeButtons.find((b) => b.text().includes('member-2'));
     await member2RemoveBtn!.trigger('click');
@@ -656,7 +656,7 @@ describe('HouseholdSettingsView', () => {
     // adminCount === 1, member-1 role === 'admin' -> block remove on member-1
     const wrapper = mountView();
     await flushPromises();
-    // remove-btn-stub for member-1 (admin)  - first remove button
+    // remove-btn-stub for member-1 (admin) - first remove button
     const removeButtons = wrapper.findAll('.remove-btn-stub');
     await removeButtons[0]!.trigger('click');
     await wrapper.vm.$nextTick();

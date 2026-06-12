@@ -19,7 +19,7 @@ export interface MemberRecord {
   };
 }
 
-// Subset of Household used by useHouseholdStore  - the operational config
+// Subset of Household used by useHouseholdStore - the operational config
 export interface HouseholdConfig {
   id: string;
   name: string;

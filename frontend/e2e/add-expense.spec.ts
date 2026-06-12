@@ -35,7 +35,7 @@ test('FAB opens add expense sheet with title field visible', async ({ page }) =>
   });
 });
 
-// 3.2-E2: Submit valid expense  - appears in list optimistically
+// 3.2-E2: Submit valid expense - appears in list optimistically
 test('submitting a valid expense adds it to the expense list', async ({ page }) => {
   const newExpense = {
     id: 'server-id-1',

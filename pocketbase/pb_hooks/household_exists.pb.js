@@ -1,4 +1,4 @@
-/// GET /api/household/exists  - returns whether any household exists on this instance.
+/// GET /api/household/exists - returns whether any household exists on this instance.
 /// Requires a valid auth token; no household membership needed.
 routerAdd('GET', '/api/household/exists', (e) => {
   try {

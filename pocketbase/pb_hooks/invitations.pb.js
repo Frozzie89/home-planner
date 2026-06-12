@@ -1,4 +1,4 @@
-/// Handler A  - auto-generate token before an invitation record is created
+/// Handler A - auto-generate token before an invitation record is created
 onRecordCreate((e) => {
   if (e.record.collection().name !== 'invitations') {
     return e.next()
@@ -34,7 +34,7 @@ onRecordCreate((e) => {
   return e.next()
 })
 
-/// Handler B  - GET /api/invite/{token}  (public  - no auth required)
+/// Handler B - GET /api/invite/{token}  (public - no auth required)
 routerAdd('GET', '/api/invite/{token}', (e) => {
   try {
     const token = e.request.pathValue('token')
@@ -58,7 +58,7 @@ routerAdd('GET', '/api/invite/{token}', (e) => {
   }
 })
 
-/// Handler C  - POST /api/accept-invite  (requires authenticated user)
+/// Handler C - POST /api/accept-invite  (requires authenticated user)
 routerAdd('POST', '/api/accept-invite', (e) => {
   try {
     const token = e.requestInfo().body['token']

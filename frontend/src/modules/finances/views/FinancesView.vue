@@ -259,7 +259,7 @@ const formattedNetAmount = computed(() => {
     <ExpenseList @edit="handleEditExpense" @delete="handleDeleteExpense" />
   </div>
 
-  <!-- Mobile FAB  - fixed position above bottom nav -->
+  <!-- Mobile FAB - fixed position above bottom nav -->
   <button type="button" class="fab" aria-label="Add expense" @click="openAddSheet">
     <i class="pi pi-plus" />
   </button>

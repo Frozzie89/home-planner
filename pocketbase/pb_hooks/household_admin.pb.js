@@ -1,4 +1,4 @@
-/// DELETE /api/household  - Sole-member admin deletes entire household and all data
+/// DELETE /api/household - Sole-member admin deletes entire household and all data
 routerAdd('DELETE', '/api/household', (e) => {
   try {
     const authRecord = e.auth
@@ -24,7 +24,7 @@ routerAdd('DELETE', '/api/household', (e) => {
       return e.json(403, { message: 'Admin only' })
     }
 
-    // Must be sole remaining member (limit 2  - we only need to know if count is exactly 1)
+    // Must be sole remaining member (limit 2 - we only need to know if count is exactly 1)
     const allMembers = $app.findRecordsByFilter(
       'members',
       'household_id = {:hid}',
@@ -59,7 +59,7 @@ routerAdd('DELETE', '/api/household', (e) => {
     )
     const household = $app.findRecordById('households', householdId)
 
-    // Delete in dependency order inside a transaction  - any failure rolls back everything
+    // Delete in dependency order inside a transaction - any failure rolls back everything
     $app.runInTransaction((txApp) => {
       // 1. notifications
       for (const r of notifications) { txApp.delete(r) }

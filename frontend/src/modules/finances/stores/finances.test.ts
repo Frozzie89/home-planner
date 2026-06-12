@@ -48,7 +48,7 @@ vi.mock('@/shared/lib/pocketbase', () => ({
   },
 }));
 
-// Persistent reactive auth state  - used by the store's isAuthenticated watcher
+// Persistent reactive auth state - used by the store's isAuthenticated watcher
 const sharedAuthState = reactive({
   memberId: 'member-a',
   householdId: 'hh-1',
@@ -387,7 +387,7 @@ describe('addExpense', () => {
     // At this point: optimistic entry + SSE-added real record = 2 entries
     expect(store.expenses).toHaveLength(2);
 
-    // POST response arrives  - should collapse to exactly 1 entry
+    // POST response arrives - should collapse to exactly 1 entry
     resolveCreate(serverRecord);
     await addPromise;
 

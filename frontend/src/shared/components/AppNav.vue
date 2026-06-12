@@ -20,7 +20,7 @@ async function goTo(path: string) {
   try {
     await router.push(path);
   } catch {
-    /* NavigationFailure  - user already on route */
+    /* NavigationFailure - user already on route */
   }
 }
 </script>
@@ -243,7 +243,7 @@ async function goTo(path: string) {
   white-space: nowrap;
 }
 
-/* Main content  - scrolls internally on mobile */
+/* Main content - scrolls internally on mobile */
 .app-content {
   flex: 1;
   overflow-y: auto;
@@ -251,7 +251,7 @@ async function goTo(path: string) {
   padding: var(--space-2);
 }
 
-/* Bottom nav  - natural flex item on mobile, no fixed positioning needed */
+/* Bottom nav - natural flex item on mobile, no fixed positioning needed */
 .bottom-nav {
   display: flex;
   flex-shrink: 0;

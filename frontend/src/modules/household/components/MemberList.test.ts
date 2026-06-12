@@ -234,7 +234,7 @@ describe('MemberList', () => {
   });
 
   it('Demote button visible on current user own admin row', () => {
-    // Current user is the admin  - continuity check is in HouseholdSettingsView, not MemberList
+    // Current user is the admin - continuity check is in HouseholdSettingsView, not MemberList
     const wrapper = mount(MemberList, {
       props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
     });
@@ -338,7 +338,7 @@ describe('MemberList', () => {
   });
 
   it('keeps current user at top when already first in input', () => {
-    // MOCK_MEMBERS has Helen (admin) first  - sort must not displace her
+    // MOCK_MEMBERS has Helen (admin) first - sort must not displace her
     const wrapper = mount(MemberList, {
       props: { members: MOCK_MEMBERS, currentUserId: 'user-admin' },
     });
