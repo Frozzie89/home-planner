@@ -33,7 +33,8 @@ When this project opens up to contributions, the following will apply.
 ### Prerequisites
 
 - Node.js 20+
-- A PocketBase instance (see [development guide](docs/development.md))
+- A PocketBase instance (see the [Quick start](../README.md#quick-start-docker) and [Local development](../README.md#local-development) sections in the README)
+- Familiarity with the [architecture](../docs/architecture.md) is recommended before making changes
 
 ### Branching
 
