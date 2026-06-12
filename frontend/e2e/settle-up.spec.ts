@@ -12,7 +12,7 @@ import {
 
 const PB_URL = 'http://pb.home-planner.localhost';
 
-// Bob paid €80 with 50/50 split → viewer owes Bob €40 → bilateralBalances returns -4000
+// Bob paid €80 with 50/50 split -> viewer owes Bob €40 -> bilateralBalances returns -4000
 const BOB_EXPENSE: MockExpense = {
   id: 'exp-bob',
   household_id: MOCK_HOUSEHOLD_ID,

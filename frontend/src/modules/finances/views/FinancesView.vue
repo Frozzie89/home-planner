@@ -64,7 +64,7 @@ async function handleExpenseSubmit(payload: NewExpensePayload) {
   await financesStore.addExpense(payload);
 }
 
-// ── Edit / Delete handlers ───────────────────────────────────────────────────
+// === Edit / Delete handlers ==================================================
 
 const editingExpense = ref<Expense | null>(null);
 const showEditSheet = ref(false);
@@ -97,7 +97,7 @@ async function confirmDelete() {
   deletingExpense.value = null;
 }
 
-// ── Settle-up handlers ───────────────────────────────────────────────────────
+// === Settle-up handlers ======================================================
 
 const showSettleConfirm = ref(false);
 const settlingBalance = ref<Balance | null>(null);
@@ -123,7 +123,7 @@ function handleSettleConfirm() {
   settlingBalance.value = null;
 }
 
-// ── Summary banner ───────────────────────────────────────────────────────────
+// === Summary banner ==========================================================
 
 const netAmount = computed(() =>
   financesStore.bilateralBalances.reduce((sum, b) => sum + b.amount, 0)
@@ -259,7 +259,7 @@ const formattedNetAmount = computed(() => {
     <ExpenseList @edit="handleEditExpense" @delete="handleDeleteExpense" />
   </div>
 
-  <!-- Mobile FAB — fixed position above bottom nav -->
+  <!-- Mobile FAB  - fixed position above bottom nav -->
   <button type="button" class="fab" aria-label="Add expense" @click="openAddSheet">
     <i class="pi pi-plus" />
   </button>

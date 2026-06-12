@@ -124,7 +124,7 @@ describe('useAuthStore', () => {
       const second = store.init();
       await Promise.all([first, second]);
 
-      // Only one fetch — concurrent call reuses in-flight promise
+      // Only one fetch  - concurrent call reuses in-flight promise
       expect(mockGetFirstListItem).toHaveBeenCalledTimes(1);
       // Both callers get the fully resolved state (not stale null)
       expect(store.householdId).toBe('hh-456');

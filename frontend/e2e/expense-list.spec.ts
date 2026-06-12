@@ -157,7 +157,7 @@ test('admin can access edit and delete on all expenses', async ({ page }) => {
   });
 });
 
-// 3.3-E8: PATCH failure — edit reverts and error banner appears
+// 3.3-E8: PATCH failure  - edit reverts and error banner appears
 test('edit failure reverts expense and shows error banner', async ({ page }) => {
   await test.step('set up mocks with failing PATCH', async () => {
     await setupMocks(page);
@@ -181,7 +181,7 @@ test('edit failure reverts expense and shows error banner', async ({ page }) => 
   });
 });
 
-// 3.3-E9: DELETE failure — expense reverts and error banner appears
+// 3.3-E9: DELETE failure  - expense reverts and error banner appears
 test('delete failure reverts expense and shows error banner', async ({ page }) => {
   await test.step('set up mocks with failing DELETE', async () => {
     await setupMocks(page);

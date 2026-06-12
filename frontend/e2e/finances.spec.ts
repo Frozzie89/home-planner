@@ -102,7 +102,7 @@ test('balance card shows correct negative amount when viewer owes money', async 
   });
 });
 
-// 3.1-E3: WCAG 2.1 AA — finances view with zero expenses
+// 3.1-E3: WCAG 2.1 AA  - finances view with zero expenses
 test('finances view renders without WCAG 2.1 AA violations', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);

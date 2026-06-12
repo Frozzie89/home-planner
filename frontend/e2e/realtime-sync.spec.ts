@@ -43,7 +43,7 @@ async function setupMocks(page: Page) {
   await mockHouseholdsApi(page);
   await mockSettingsMembersApi(page);
   await mockExpensesApi(page, [EXISTING_EXPENSE]);
-  // Intercept SSE realtime endpoint — return a minimal connect event and keep open
+  // Intercept SSE realtime endpoint  - return a minimal connect event and keep open
   await page.route(`${PB_URL}/api/realtime*`, (route) => {
     route.fulfill({
       status: 200,
