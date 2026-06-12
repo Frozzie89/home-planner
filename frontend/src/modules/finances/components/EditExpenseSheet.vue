@@ -90,7 +90,7 @@ watch(
     <div class="field" :class="{ 'field-error': amountError }">
       <label for="expense-amount">Amount</label>
       <InputNumber
-        inputId="expense-amount"
+        input-id="expense-amount"
         v-model="amountRaw"
         mode="currency"
         :currency="currency"
@@ -111,13 +111,13 @@ watch(
     <div v-if="showMoreOptions" class="more-options">
       <div class="field">
         <label for="expense-date">Date</label>
-        <DatePicker inputId="expense-date" v-model="date" :date-format="localeDateFormat" />
+        <DatePicker input-id="expense-date" v-model="date" :date-format="localeDateFormat" />
       </div>
 
       <div class="field">
         <label for="expense-portion">Your share: {{ portion }}%</label>
         <InputNumber
-          inputId="expense-portion"
+          input-id="expense-portion"
           v-model="portion"
           :min="0"
           :max="100"

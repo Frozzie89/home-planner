@@ -15,7 +15,7 @@ const props = withDefaults(
     size?: number;
     userRecord?: UserRecord | null;
   }>(),
-  { size: 32 }
+  { size: 32, userRecord: null }
 );
 
 const AVATAR_COLORS = ['#c0705a', '#5a7dc0', '#5ac07d', '#c09f5a', '#9b5ac0'];

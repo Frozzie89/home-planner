@@ -19,7 +19,7 @@
       <div class="form-field">
         <label for="currency">Display Currency</label>
         <Select
-          inputId="currency"
+          input-id="currency"
           v-model="selectedCurrency"
           :options="CURRENCY_OPTIONS"
           option-label="label"
