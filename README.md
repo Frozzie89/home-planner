@@ -11,8 +11,8 @@ Built for personal use, with a focus on being lightweight, easy to use, and self
 ## Features
 
 - **Expense tracking** : log shared expenses, track balances, and settle up between members
-- **Member management** : invitation-only household, user profiles and avatars
 - **Food planner** : plan meals and manage a shared grocery list *(not yet implemented)*
+- **Member management** : invitation-only household, user profiles and avatars
 - **Self-hostable** : runs as two Docker containers behind Traefik
 
 ... and more to come
@@ -22,10 +22,10 @@ Built for personal use, with a focus on being lightweight, easy to use, and self
 
 | Tool | Version | Context |
 |------|---------|---------|
-| Docker | 24+ | Docker setup only |
-| Docker Compose | v2 | Docker setup only |
-| Node.js | 20+ | Local dev only |
-| PocketBase | latest | Local dev only |
+| Docker | 24+ | Docker setup |
+| Docker Compose | v2 | Docker setup |
+| Node.js | 20+ | Local dev |
+| PocketBase | 0.27.x | Local dev |
 
 ## Tech stack
 
@@ -54,12 +54,13 @@ Copy `.env.example` to `.env` and adjust as needed. The frontend has its own `fr
 ## Local development
 
 ```sh
-# 1. Start PocketBase
-cd pocketbase
-docker build -t home-planner-pb .
-docker run -p 8090:8090 home-planner-pb
+# 1. Download and place the PocketBase binary in the pocketbase/ directory
 
-# 2. Start the frontend
+# 2. Start PocketBase
+cd pocketbase
+./pocketbase serve --hooksDir pb_hooks --migrationsDir pb_migrations
+
+# 3. Start the frontend
 cd frontend
 cp .env.example .env      # set VITE_PB_URL=http://localhost:8090
 npm install
