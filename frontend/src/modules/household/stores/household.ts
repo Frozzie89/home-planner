@@ -28,6 +28,7 @@ export const useHouseholdStore = defineStore('household', () => {
     reminder_day.value = config.reminder_day;
   }
 
+  /** Fetches and populates household config. No-ops if the requested household is already loaded. */
   async function load(householdId: string) {
     if (id.value === householdId) return;
     const config = await pb.collection('households').getOne<HouseholdConfig>(householdId);
