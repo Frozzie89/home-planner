@@ -343,7 +343,7 @@ describe('HouseholdSettingsView', () => {
     expect(mockToastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'error',
-        summary: "Couldn't save — try again",
+        summary: "Couldn't save - try again",
       })
     );
     // Form state preserved - name still shows the updated value
@@ -439,7 +439,7 @@ describe('HouseholdSettingsView', () => {
     expect(mockToastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'error',
-        summary: "Couldn't generate invite link — try again",
+        summary: "Couldn't generate invite link - try again",
       })
     );
     expect(wrapper.find('.bottom-sheet-stub[data-title="Invite member"]').exists()).toBe(false);
@@ -515,7 +515,7 @@ describe('HouseholdSettingsView', () => {
     expect(mockToastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'error',
-        summary: "Couldn't remove member — try again",
+        summary: "Couldn't remove member - try again",
       })
     );
   });
@@ -625,7 +625,7 @@ describe('HouseholdSettingsView', () => {
 
   // --- LAST ADMIN BLOCK ---
 
-  it('blocks demote-self when only 1 admin — shows inline error, no sheet opens', async () => {
+  it('blocks demote-self when only 1 admin - shows inline error, no sheet opens', async () => {
     // Sole admin is current user (user-test)
     mockGetFullList.mockResolvedValue([
       {
@@ -651,7 +651,7 @@ describe('HouseholdSettingsView', () => {
     expect(wrapper.find('.last-admin-error').text()).toContain('At least one admin must remain');
   });
 
-  it('blocks remove on last admin — shows inline error, no remove sheet opens', async () => {
+  it('blocks remove on last admin - shows inline error, no remove sheet opens', async () => {
     // MOCK_MEMBERS: member-1 (admin, user-1), member-2 (member)
     // adminCount === 1, member-1 role === 'admin' -> block remove on member-1
     const wrapper = mountView();

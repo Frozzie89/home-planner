@@ -9,11 +9,6 @@
       "count": 1
     }
   },
-  "src/modules/household/views/HouseholdSettingsView.vue": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/modules/household/views/InviteAcceptView.test.ts": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
