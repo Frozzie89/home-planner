@@ -2,7 +2,7 @@
 
 <!-- What does this PR do? A short paragraph. -->
 
-Closes #<!-- issue number -->
+Linked to issue #<!-- issue number -->
 
 ## Changes
 
