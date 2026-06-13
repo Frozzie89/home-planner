@@ -33,7 +33,7 @@ export const useFinancesStore = defineStore('finances', () => {
 
   // Bilateral balances: one entry per (viewer, otherMember) pair.
   // Positive = viewer is owed; Negative = viewer owes.
-  // All arithmetic operates on integer cents — never floats.
+  // All arithmetic operates on integer cents - never floats.
   const bilateralBalances = computed<Balance[]>(() => {
     const householdStore = useHouseholdStore();
     const viewerMemberId = authStore.memberId;
@@ -60,13 +60,13 @@ export const useFinancesStore = defineStore('finances', () => {
 
       for (const expense of expenses.value) {
         if (expense.member_id === viewerMemberId) {
-          // Viewer paid — compute this other member's share of the non-viewer portion
+          // Viewer paid - compute this other member's share of the non-viewer portion
           const remainder = Math.trunc((expense.amount * (100 - expense.portion)) / 100);
           if (totalOtherRatio > 0) {
             balance += Math.round((remainder * otherRatio) / totalOtherRatio);
           }
         } else if (expense.member_id === other.id) {
-          // Other paid — compute viewer's share of the non-other portion
+          // Other paid - compute viewer's share of the non-other portion
           const remainder = Math.trunc((expense.amount * (100 - expense.portion)) / 100);
           if (totalViewerSideRatio > 0) {
             balance -= Math.round((remainder * viewerRatio) / totalViewerSideRatio);

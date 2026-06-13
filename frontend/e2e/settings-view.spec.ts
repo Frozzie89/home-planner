@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
   await injectAuth(page);
   // Catch-all registered first (Playwright LIFO = lowest priority)
   await mockRemainingPbCalls(page);
-  // Expenses endpoint — FinancesView needs this if the router redirects there
+  // Expenses endpoint - FinancesView needs this if the router redirects there
   await page.route(`${PB_URL}/api/collections/expenses/records*`, (route) =>
     route.fulfill({
       status: 200,
@@ -73,7 +73,7 @@ test('member list shows both members — current user first with "You" badge', a
 
 test('member-role user navigating to /settings is redirected to /finances', async ({ page }) => {
   await test.step('Override members mock to return member role', async () => {
-    // Registered after beforeEach mock — LIFO gives this higher priority
+    // Registered after beforeEach mock - LIFO gives this higher priority
     await mockSettingsMembersApi(page, { currentUserRole: 'member' });
   });
 

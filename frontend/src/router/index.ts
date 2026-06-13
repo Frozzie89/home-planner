@@ -85,7 +85,7 @@ router.beforeEach(async (to) => {
     try {
       await householdStore.load(authStore.householdId);
     } catch {
-      // Non-critical — household name in nav bar stays empty if the fetch fails
+      // Non-critical - household name in nav bar stays empty if the fetch fails
     }
   }
 

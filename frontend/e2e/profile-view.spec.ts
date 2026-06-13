@@ -19,7 +19,7 @@ async function setupProfileMocks(
   await mockRemainingPbCalls(page);
   await mockHouseholdsApi(page); // router guard calls householdStore.load() on first nav
   await mockMembersApi(page, true); // handles auth store's getFirstListItem (admin role)
-  await mockProfileMemberApi(page, role); // handles ProfileView's getOne (LIFO — wins for /records/:id)
+  await mockProfileMemberApi(page, role); // handles ProfileView's getOne (LIFO - wins for /records/:id)
 }
 
 test('profile view renders without WCAG 2.1 AA violations', async ({ page }) => {

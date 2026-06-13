@@ -30,7 +30,7 @@ export async function injectAuth(page: Page, options: { householdId?: string | n
 
 // Mock the members lookup that authStore.init() makes.
 // `respondWithMember: true` -> returns a member record (use for /finances)
-// `respondWithMember: false` -> returns 404 (use for /setup — user has no household yet)
+// `respondWithMember: false` -> returns 404 (use for /setup - user has no household yet)
 export async function mockMembersApi(page: Page, respondWithMember: boolean) {
   await page.route(`${PB_URL}/api/collections/members/records*`, (route) => {
     if (respondWithMember) {
@@ -76,7 +76,7 @@ export async function mockRemainingPbCalls(page: Page) {
   await page.route(`${PB_URL}/**`, (route) => route.abort());
 }
 
-// ─── Epic 3 helpers ──────────────────────────────────────────────────────────
+// === Expense API helpers =====================================================
 
 export interface MockExpense {
   id: string;
@@ -135,7 +135,7 @@ export async function mockExpensesCreateApi(
   });
 }
 
-// ─── Epic 2 helpers ──────────────────────────────────────────────────────────
+// === Settings and members API helpers ========================================
 
 export const MOCK_MEMBER_ID_2 = 'smoke-member-id-2';
 export const MOCK_USER_ID_2 = 'smoke-user-id-2';
@@ -198,7 +198,7 @@ export async function mockSettingsMembersApi(
   );
 }
 
-// Mock GET /api/collections/households/records/:id — used by HouseholdSettingsView.
+// Mock GET /api/collections/households/records/:id - used by HouseholdSettingsView.
 export async function mockHouseholdsApi(page: Page) {
   await page.route(`${PB_URL}/api/collections/households/records/${MOCK_HOUSEHOLD_ID}*`, (route) =>
     route.fulfill({
@@ -270,7 +270,7 @@ export async function mockExpenseDeleteApi(
   });
 }
 
-// ─── Auth callback helpers ────────────────────────────────────────────────────
+// === Auth callback helpers ===================================================
 
 // State token shared between injectOAuthProviderSession and callback URL params.
 // Must be the same string so handleCallback passes the state-mismatch guard.
@@ -290,7 +290,7 @@ export async function injectOAuthProviderSession(page: Page, state = OAUTH_TEST_
   );
 }
 
-// Mocks POST /api/collections/users/auth-with-oauth2 — the PocketBase SDK
+// Mocks POST /api/collections/users/auth-with-oauth2 - the PocketBase SDK
 // processes this response and calls pb.authStore.save(token, record), which makes
 // pb.authStore.isValid = true and sets pb.authStore.record.id = MOCK_USER_ID.
 // Note: the SDK method is authWithOAuth2Code() but the HTTP endpoint is auth-with-oauth2 (no "-code").
@@ -317,7 +317,7 @@ export async function mockOAuth2CodeExchange(page: Page) {
   });
 }
 
-// Mocks GET /api/household/exists — called by AuthView when householdId is null
+// Mocks GET /api/household/exists - called by AuthView when householdId is null
 // to distinguish path 1 (no household -> /setup) from path 3 (rejected -> /auth).
 export async function mockHouseholdExistsApi(page: Page, exists: boolean) {
   await page.route(`${PB_URL}/api/household/exists*`, (route) =>
@@ -329,7 +329,7 @@ export async function mockHouseholdExistsApi(page: Page, exists: boolean) {
   );
 }
 
-// Mocks GET /api/collections/users/auth-methods — returns a single Google OAuth2
+// Mocks GET /api/collections/users/auth-methods - returns a single Google OAuth2
 // provider. Used by AuthView and InviteAcceptView to render sign-in buttons.
 // PocketBase SDK appends ?fields=... so the wildcard suffix is required.
 export async function mockAuthMethodsApi(page: Page) {
@@ -357,7 +357,7 @@ export async function mockAuthMethodsApi(page: Page) {
   );
 }
 
-// Mock GET /api/collections/members/records/:memberId — used by ProfileView's getOne.
+// Mock GET /api/collections/members/records/:memberId - used by ProfileView's getOne.
 // Registered after mockMembersApi (LIFO) so it matches the specific ID path first.
 export async function mockProfileMemberApi(page: Page, role: 'admin' | 'member' = 'member') {
   await page.route(`${PB_URL}/api/collections/members/records/${MOCK_MEMBER_ID}*`, (route) =>
