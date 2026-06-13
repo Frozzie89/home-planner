@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
 import Button from 'primevue/button';
 import Skeleton from 'primevue/skeleton';
 import Toast from 'primevue/toast';
@@ -11,34 +10,10 @@ import { useAuthStore } from '@/shared/stores/auth';
 import { useHouseholdStore } from '@/modules/household/stores/household';
 import type { Household } from '@/shared/types';
 import type { MemberRecord } from '@/modules/household/types';
-import SplitRatioEditor from '@/modules/household/components/SplitRatioEditor.vue';
+import FinancesSection from '@/modules/household/components/FinancesSection.vue';
+import FoodSection from '@/modules/household/components/FoodSection.vue';
 import MembersSection from '@/modules/household/components/MembersSection.vue';
 import HouseholdDangerZone from '@/modules/household/components/HouseholdDangerZone.vue';
-
-const CURRENCY_OPTIONS = [
-  { code: 'AUD', label: 'AUD — Australian Dollar' },
-  { code: 'CAD', label: 'CAD — Canadian Dollar' },
-  { code: 'CHF', label: 'CHF — Swiss Franc' },
-  { code: 'DKK', label: 'DKK — Danish Krone' },
-  { code: 'EUR', label: 'EUR — Euro' },
-  { code: 'GBP', label: 'GBP — British Pound' },
-  { code: 'JPY', label: 'JPY — Japanese Yen' },
-  { code: 'NOK', label: 'NOK — Norwegian Krone' },
-  { code: 'NZD', label: 'NZD — New Zealand Dollar' },
-  { code: 'SEK', label: 'SEK — Swedish Krona' },
-  { code: 'SGD', label: 'SGD — Singapore Dollar' },
-  { code: 'USD', label: 'USD — US Dollar' },
-];
-
-const REMINDER_DAY_OPTIONS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
 
 const authStore = useAuthStore();
 const householdStore = useHouseholdStore();
@@ -225,37 +200,15 @@ async function handleSave() {
         </div>
 
         <!-- FINANCES -->
-        <div class="pref-section">
-          <p class="section-label">FINANCES</p>
-          <div class="pref-card">
-            <label class="field-label-upper" for="currency">DISPLAY CURRENCY</label>
-            <Select
-              id="currency"
-              v-model="formData.currency"
-              :options="CURRENCY_OPTIONS"
-              option-label="label"
-              option-value="code"
-            />
-          </div>
-          <SplitRatioEditor
-            v-model:split-ratios="splitRatioForm"
-            :members="sortedMembers"
-            :is-single-member="isSingleMember"
-          />
-        </div>
+        <FinancesSection
+          v-model:currency="formData.currency"
+          v-model:split-ratios="splitRatioForm"
+          :members="sortedMembers"
+          :is-single-member="isSingleMember"
+        />
 
         <!-- FOOD -->
-        <div class="pref-section">
-          <p class="section-label">FOOD</p>
-          <div class="pref-card">
-            <label class="field-label-upper" for="reminder-day">PLANNING REMINDER DAY</label>
-            <Select
-              id="reminder-day"
-              v-model="formData.reminder_day"
-              :options="REMINDER_DAY_OPTIONS"
-            />
-          </div>
-        </div>
+        <FoodSection v-model:reminder-day="formData.reminder_day" />
 
         <!-- MEMBERS -->
         <MembersSection
