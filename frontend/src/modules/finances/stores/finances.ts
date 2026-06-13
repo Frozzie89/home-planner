@@ -22,6 +22,7 @@ export const useFinancesStore = defineStore('finances', () => {
   const addExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
   const updateExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
   const deleteExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
+  // Ephemeral settle-up state. Keys are "memberAId:memberBId". Not persisted; cleared on the next expense mutation.
   const settledPairs = ref<Set<string>>(new Set());
 
   watch(
@@ -31,8 +32,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   );
 
-  // Bilateral balances: one entry per (viewer, otherMember) pair.
-  // Positive = viewer is owed; Negative = viewer owes.
+  /** One balance entry per (viewer, otherMember) pair, in integer cents. Positive = viewer is owed; negative = viewer owes. */
   // All arithmetic operates on integer cents - never floats.
   const bilateralBalances = computed<Balance[]>(() => {
     const householdStore = useHouseholdStore();
@@ -114,6 +114,7 @@ export const useFinancesStore = defineStore('finances', () => {
     members.value = result;
   }
 
+  /** Adds an expense with optimistic UI. On success, deduplicates against any SSE echo that may arrive before the POST response. */
   async function addExpense(payload: NewExpensePayload) {
     settledPairs.value = new Set();
     if (!authStore.householdId || !authStore.memberId) return;
@@ -166,6 +167,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  /** Updates an expense with optimistic UI. Reverts on error unless the session ended mid-flight. */
   async function updateExpense(id: string, payload: UpdateExpensePayload) {
     if (!authStore.householdId || !authStore.memberId) return;
     if (updateExpenseStatus.value === 'loading') return;
@@ -217,6 +219,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  /** Deletes an expense with optimistic UI. Reverts on error unless the session ended mid-flight. */
   async function deleteExpense(id: string) {
     if (!authStore.householdId) return;
     if (deleteExpenseStatus.value === 'loading') return;
@@ -239,6 +242,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  /** Applies a realtime SSE event. A create upserts by id to deduplicate against an optimistic entry for the same record. */
   function applySSEEvent(action: 'create' | 'update' | 'delete', record: Expense) {
     if (action === 'create') {
       settledPairs.value = new Set();
@@ -266,6 +270,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  /** Marks a bilateral pair as settled for the current session, zeroing their balance in the UI without writing to the DB. */
   function settleUp(payload: SettleUpPayload) {
     const key = `${payload.member_a_id}:${payload.member_b_id}`;
     const updated = new Set(settledPairs.value);
