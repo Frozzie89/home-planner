@@ -5,12 +5,26 @@ import {
   mockHouseholdsApi,
   mockSettingsMembersApi,
   mockExpensesApi,
+  mockSettlementsApi,
+  mockSettlementsCreateApi,
   MOCK_HOUSEHOLD_ID,
+  MOCK_MEMBER_ID,
   MOCK_MEMBER_ID_2,
   type MockExpense,
+  type MockSettlement,
 } from './helpers/auth';
 
 const PB_URL = 'http://pb.home-planner.localhost';
+
+const MOCK_SETTLEMENT: MockSettlement = {
+  id: 'settlement-1',
+  household_id: MOCK_HOUSEHOLD_ID,
+  member_a_id: MOCK_MEMBER_ID,
+  member_b_id: MOCK_MEMBER_ID_2,
+  settled_at: '2026-06-13 10:00:00.000Z',
+  created: '2026-06-13 10:00:00.000Z',
+  updated: '2026-06-13 10:00:00.000Z',
+};
 
 // Bob paid €80 with 50/50 split -> viewer owes Bob €40 -> bilateralBalances returns -4000
 const BOB_EXPENSE: MockExpense = {
@@ -31,6 +45,7 @@ async function setupMocks(page: Page, expenses: MockExpense[] = [BOB_EXPENSE]) {
   await mockHouseholdsApi(page);
   await mockSettingsMembersApi(page);
   await mockExpensesApi(page, expenses);
+  await mockSettlementsApi(page, []);
   await page.route(`${PB_URL}/api/realtime*`, (route) =>
     route.fulfill({
       status: 200,
@@ -82,6 +97,10 @@ test('confirming settle-up hides SettleUpCard and shows settled state', async ({
 
   await test.step('confirmation sheet shows correct copy', async () => {
     await expect(page.getByText("Confirm you've settled the balance with Bob?")).toBeVisible();
+  });
+
+  await test.step('register POST mock for settlement creation (LIFO: runs before GET handler)', async () => {
+    await mockSettlementsCreateApi(page, MOCK_SETTLEMENT);
   });
 
   await test.step('click Confirm', async () => {
