@@ -50,7 +50,7 @@ home-planner/
 │   ├── pb_hooks/                     # PocketBase JS hooks (server-side logic)
 │   └── pb_migrations/                # numbered schema migration files
 │
-└── docker-compose.yml
+└── compose.yml
 ```
 
 **Module rule:** components inside a module directory (`modules/finances/`, `modules/household/`) are private to that module and must not be imported by other modules. `shared/` components and stores are the only cross-module dependencies.

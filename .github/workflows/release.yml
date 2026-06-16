@@ -86,7 +86,7 @@ jobs:
             --tag frozzie89/home-planner-pocketbase:latest \
             frozzie89/home-planner-pocketbase:${{ github.ref_name }}
 
-      - name: Generate docker-compose.prod.yml
+      - name: Generate compose.yml
         env:
           IMAGE_TAG: ${{ github.ref_name }}
         run: |
@@ -96,7 +96,7 @@ jobs:
 
           tag = os.environ["IMAGE_TAG"]
 
-          with open("docker-compose.yml") as f:
+          with open("compose.yml") as f:
               compose = yaml.safe_load(f)
 
           svc = compose["services"]
@@ -107,10 +107,10 @@ jobs:
           svc["pocketbase"].pop("build", None)
           svc["pocketbase"]["image"] = f"frozzie89/home-planner-pocketbase:{tag}"
 
-          with open("docker-compose.prod.yml", "w") as f:
+          with open("compose.yml", "w") as f:
               yaml.dump(compose, f, default_flow_style=False, sort_keys=False)
 
-          print(f"Generated docker-compose.prod.yml with tag {tag}")
+          print(f"Generated compose.yml with tag {tag}")
           EOF
 
       - name: Create GitHub Release
@@ -118,5 +118,5 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            docker-compose.prod.yml
+            compose.yml
             .env.example
