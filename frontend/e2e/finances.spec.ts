@@ -6,12 +6,12 @@ import {
   mockSettingsMembersApi,
   mockHouseholdsApi,
   mockExpensesApi,
+  mockSettlementsApi,
   MOCK_HOUSEHOLD_ID,
   MOCK_MEMBER_ID,
   MOCK_MEMBER_ID_2,
 } from './helpers/auth';
 
-// 3.1-E1: Zero balance when no expenses
 test('balance card shows zero state when no expenses exist', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -19,6 +19,7 @@ test('balance card shows zero state when no expenses exist', async ({ page }) =>
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {
@@ -32,7 +33,6 @@ test('balance card shows zero state when no expenses exist', async ({ page }) =>
   });
 });
 
-// 3.1-E2: Correct positive balance amount when viewer is owed money
 test('balance card shows correct positive amount when viewer is owed money', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -54,6 +54,7 @@ test('balance card shows correct positive amount when viewer is owed money', asy
         updated: '2026-06-01 00:00:00.000Z',
       },
     ]);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {
@@ -67,7 +68,6 @@ test('balance card shows correct positive amount when viewer is owed money', asy
   });
 });
 
-// 3.1-E4: Negative balance when viewer owes money
 test('balance card shows correct negative amount when viewer owes money', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -89,6 +89,7 @@ test('balance card shows correct negative amount when viewer owes money', async 
         updated: '2026-06-02 00:00:00.000Z',
       },
     ]);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {
@@ -102,7 +103,6 @@ test('balance card shows correct negative amount when viewer owes money', async 
   });
 });
 
-// 3.1-E3: WCAG 2.1 AA - finances view with zero expenses
 test('finances view renders without WCAG 2.1 AA violations', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -110,6 +110,7 @@ test('finances view renders without WCAG 2.1 AA violations', async ({ page }) =>
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {

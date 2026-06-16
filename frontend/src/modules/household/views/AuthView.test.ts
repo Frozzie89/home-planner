@@ -90,7 +90,7 @@ describe('AuthView', () => {
     setLocation('');
   });
 
-  describe('handleCallback() — post-OAuth2 path routing', () => {
+  describe('handleCallback() - post-OAuth2 path routing', () => {
     beforeEach(() => {
       setLocation('?code=abc&state=xyz');
       sessionStorage.setItem(
@@ -167,7 +167,7 @@ describe('AuthView', () => {
     });
   });
 
-  describe('onMounted() — error query param handling', () => {
+  describe('onMounted() - error query param handling', () => {
     it('?error=not_registered -> notRegisteredMessage shown, sign-in form rendered, loadProviders called', async () => {
       setLocation('?error=not_registered');
       mockListAuthMethods.mockResolvedValue({

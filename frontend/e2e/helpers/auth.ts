@@ -270,6 +270,52 @@ export async function mockExpenseDeleteApi(
   });
 }
 
+// === Settlements API helpers =================================================
+
+export interface MockSettlement {
+  id: string;
+  household_id: string;
+  member_a_id: string;
+  member_b_id: string;
+  settled_at: string;
+  created: string;
+  updated: string;
+}
+
+export async function mockSettlementsApi(page: Page, settlements: MockSettlement[] = []) {
+  await page.route(`${PB_URL}/api/collections/settlements/records*`, (route) => {
+    if (route.request().method() === 'POST') {
+      route.fallback();
+      return;
+    }
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        page: 1,
+        perPage: 1000,
+        totalItems: settlements.length,
+        totalPages: settlements.length === 0 ? 0 : 1,
+        items: settlements,
+      }),
+    });
+  });
+}
+
+export async function mockSettlementsCreateApi(page: Page, created: MockSettlement) {
+  await page.route(`${PB_URL}/api/collections/settlements/records*`, (route) => {
+    if (route.request().method() !== 'POST') {
+      route.fallback();
+      return;
+    }
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(created),
+    });
+  });
+}
+
 // === Auth callback helpers ===================================================
 
 // State token shared between injectOAuthProviderSession and callback URL params.

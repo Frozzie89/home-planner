@@ -101,7 +101,7 @@ describe('UserAvatar', () => {
     expect(wrapper.find('span').text()).toBe('?');
   });
 
-  it('background color is deterministic — same id always yields the same color', () => {
+  it('background color is deterministic - same id always yields the same color', () => {
     mockRecord.value = { id: 'abc', avatar: '', name: 'Test' };
 
     const wrapper1 = mount(UserAvatar);

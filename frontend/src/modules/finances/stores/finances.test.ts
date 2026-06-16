@@ -9,7 +9,9 @@ import type { MemberRecord } from '@/modules/household/types';
 const {
   mockGetFullListExpenses,
   mockGetFullListMembers,
+  mockGetFullListSettlements,
   mockCreateFn,
+  mockSettlementsCreateFn,
   mockUpdateFn,
   mockDeleteFn,
   mockFilter,
@@ -18,7 +20,9 @@ const {
 } = vi.hoisted(() => ({
   mockGetFullListExpenses: vi.fn(),
   mockGetFullListMembers: vi.fn(),
+  mockGetFullListSettlements: vi.fn(),
   mockCreateFn: vi.fn(),
+  mockSettlementsCreateFn: vi.fn(),
   mockUpdateFn: vi.fn(),
   mockDeleteFn: vi.fn(),
   mockFilter: vi.fn((expr: string, params: Record<string, unknown>) =>
@@ -40,8 +44,15 @@ vi.mock('@/shared/lib/pocketbase', () => ({
           ? mockGetFullListExpenses
           : name === 'members'
             ? mockGetFullListMembers
+            : name === 'settlements'
+              ? mockGetFullListSettlements
+              : vi.fn(),
+      create:
+        name === 'expenses'
+          ? mockCreateFn
+          : name === 'settlements'
+            ? mockSettlementsCreateFn
             : vi.fn(),
-      create: name === 'expenses' ? mockCreateFn : vi.fn(),
       update: name === 'expenses' ? mockUpdateFn : vi.fn(),
       delete: name === 'expenses' ? mockDeleteFn : vi.fn(),
     }),
@@ -91,6 +102,8 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
+  // Default: no settlements - ensures all existing load tests pass without individual setup
+  mockGetFullListSettlements.mockResolvedValue([]);
   // Restore defaults after each test
   sharedAuthState.memberId = 'member-a';
   sharedAuthState.isAuthenticated = true;
@@ -180,7 +193,7 @@ describe('bilateralBalances', () => {
     expect(cBalance?.amount).toBe(3400);
   });
 
-  it('uses integer arithmetic — no float intermediates stored', () => {
+  it('uses integer arithmetic - no float intermediates stored', () => {
     const store = useFinancesStore();
     store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
     // 4580 cents (€45.80) with 0% portion -> all 4580 goes to Bob
@@ -556,7 +569,7 @@ describe('applySSEEvent', () => {
     expect(store.expenses[1]!.id).toBe('exp-b');
   });
 
-  it('create action with existing id replaces the record (upsert — handles own write SSE echo)', () => {
+  it('create action with existing id replaces the record (upsert - handles own write SSE echo)', () => {
     const store = useFinancesStore();
     store.expenses = [EXPENSE_A];
 
@@ -646,69 +659,282 @@ describe('applySSEEvent', () => {
   });
 });
 
-describe('settleUp', () => {
-  const EXPENSE_A: Expense = {
-    id: 'exp-a',
+describe('settleUp and isSettledPair', () => {
+  const PRE_SETTLEMENT_EXPENSE: Expense = {
+    id: 'exp-pre',
     household_id: 'hh-1',
     member_id: 'member-b',
     title: 'Dinner',
     amount: 8000,
     portion: 50,
     date: '2026-06-09 00:00:00.000Z',
-    created: '2026-06-09T00:00:00Z',
-    updated: '2026-06-09T00:00:00Z',
+    created: '2026-06-09 10:00:00.000Z',
+    updated: '2026-06-09 10:00:00.000Z',
   };
 
-  it('isSettledPair returns false before settle-up', () => {
+  it('isSettledPair returns false when no settlements exist', () => {
     const store = useFinancesStore();
     expect(store.isSettledPair('member-b')).toBe(false);
   });
 
-  it('settleUp marks a pair as settled; isSettledPair returns true', () => {
+  it('settleUp adds an optimistic settlement and isSettledPair returns true when balance is 0', async () => {
     const store = useFinancesStore();
-    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' });
+    store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
+    store.expenses = []; // zero balance -> isSettledPair returns true after settle
+    mockSettlementsCreateFn.mockResolvedValueOnce({
+      id: 'real-settlement-id',
+      household_id: 'hh-1',
+      member_a_id: 'member-a',
+      member_b_id: 'member-b',
+      settled_at: '2026-06-13 10:00:00.000Z',
+      created: '2026-06-13 10:00:00.000Z',
+      updated: '2026-06-13 10:00:00.000Z',
+    });
+
+    // settleUp is called without await in FinancesView - test the optimistic path
+    const settlePromise = store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' });
+    // Optimistic: settlement is added immediately
+    expect(store.isSettledPair('member-b')).toBe(true);
+
+    await settlePromise;
+    // Real record replaces optimistic - still settled
+    expect(store.isSettledPair('member-b')).toBe(true);
+    expect(store.activeSettlements[0]!.id).toBe('real-settlement-id');
+  });
+
+  it('bilateralBalances excludes pre-settlement expenses', async () => {
+    const store = useFinancesStore();
+    store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
+    store.expenses = [PRE_SETTLEMENT_EXPENSE];
+
+    // Without settlement: balance is -4000 (Bob paid €80, viewer owes €40)
+    expect(store.bilateralBalances[0]!.amount).not.toBe(0);
+
+    // Inject a settlement after the pre-settlement expense
+    store.activeSettlements = [
+      {
+        id: 's-1',
+        household_id: 'hh-1',
+        member_a_id: 'member-a',
+        member_b_id: 'member-b',
+        settled_at: '2026-06-09 11:00:00.000Z', // after the expense's created
+        created: '2026-06-09 11:00:00.000Z',
+        updated: '2026-06-09 11:00:00.000Z',
+      },
+    ];
+
+    // Pre-settlement expense is now excluded -> balance = 0
+    expect(store.bilateralBalances[0]!.amount).toBe(0);
     expect(store.isSettledPair('member-b')).toBe(true);
   });
 
-  it('bilateralBalances returns 0 for a settled pair', () => {
+  it('excludes pre-settlement expenses with ISO T-separator created (addExpense optimistic format)', () => {
     const store = useFinancesStore();
     store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
-    store.expenses = [EXPENSE_A];
-    expect(store.bilateralBalances[0]!.amount).not.toBe(0);
-    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' });
+    // Optimistic expense: addExpense sets created via new Date().toISOString() - T separator
+    store.expenses = [
+      {
+        ...PRE_SETTLEMENT_EXPENSE,
+        created: '2026-06-09T10:00:00.000Z', // T separator - the regression case
+      },
+    ];
+    store.activeSettlements = [
+      {
+        id: 's-1',
+        household_id: 'hh-1',
+        member_a_id: 'member-a',
+        member_b_id: 'member-b',
+        settled_at: '2026-06-09 11:00:00.000Z', // space separator, after the expense
+        created: '2026-06-09 11:00:00.000Z',
+        updated: '2026-06-09 11:00:00.000Z',
+      },
+    ];
+
+    // The expense must be excluded even though its created uses T-separator format
     expect(store.bilateralBalances[0]!.amount).toBe(0);
   });
 
-  it('addExpense clears settled pairs', async () => {
+  it('includes expenses with absent created - sentinel puts them past any settlement cutoff (AC2: date must never be used)', () => {
     const store = useFinancesStore();
-    store.loadStatus = 'success';
-    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' });
-    expect(store.isSettledPair('member-b')).toBe(true);
+    store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
+    store.expenses = [
+      {
+        ...PRE_SETTLEMENT_EXPENSE,
+        created: undefined, // absent - sentinel '9999-12-31...' is used instead
+        date: '2026-06-09 00:00:00.000Z', // must NOT be used as fallback per AC2
+      },
+    ];
+    store.activeSettlements = [
+      {
+        id: 's-1',
+        household_id: 'hh-1',
+        member_a_id: 'member-a',
+        member_b_id: 'member-b',
+        settled_at: '2026-06-09 11:00:00.000Z',
+        created: '2026-06-09 11:00:00.000Z',
+        updated: '2026-06-09 11:00:00.000Z',
+      },
+    ];
 
-    mockCreateFn.mockResolvedValueOnce(makeExpense({ id: 'new-id' }));
-    await store.addExpense({
-      title: 'Lunch',
-      amount: 2000,
-      portion: 50,
-      date: '2026-06-10 00:00:00.000Z',
-    });
+    // Sentinel '9999-12-31...' is after any cutoff, so expense IS included
+    expect(store.bilateralBalances[0]!.amount).not.toBe(0);
+  });
+
+  it('isSettledPair returns false when post-settlement expense creates non-zero balance', () => {
+    const store = useFinancesStore();
+    store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
+    store.activeSettlements = [
+      {
+        id: 's-1',
+        household_id: 'hh-1',
+        member_a_id: 'member-a',
+        member_b_id: 'member-b',
+        settled_at: '2026-06-09 11:00:00.000Z',
+        created: '2026-06-09 11:00:00.000Z',
+        updated: '2026-06-09 11:00:00.000Z',
+      },
+    ];
+    // New expense AFTER settlement date
+    store.expenses = [
+      makeExpense({
+        member_id: 'member-b',
+        amount: 8000,
+        portion: 50,
+        created: '2026-06-10 10:00:00.000Z',
+      }),
+    ];
+
+    // Balance is non-zero because post-settlement expense exists
+    expect(store.bilateralBalances[0]!.amount).not.toBe(0);
     expect(store.isSettledPair('member-b')).toBe(false);
   });
 
-  it('applySSEEvent create action clears settled pairs', () => {
+  it('settleUp reverts optimistic record on API failure', async () => {
     const store = useFinancesStore();
-    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' });
-    expect(store.isSettledPair('member-b')).toBe(true);
-    store.applySSEEvent('create', EXPENSE_A);
+    store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
+    store.expenses = [];
+    mockSettlementsCreateFn.mockRejectedValueOnce(new Error('Network error'));
+
+    const settlePromise = store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' });
+    expect(store.activeSettlements).toHaveLength(1); // optimistic
+
+    await settlePromise;
+    expect(store.activeSettlements).toHaveLength(0); // reverted
     expect(store.isSettledPair('member-b')).toBe(false);
   });
 
-  it('reset clears settled pairs', () => {
+  it('reset clears activeSettlements', async () => {
     const store = useFinancesStore();
-    store.settleUp({ member_a_id: 'member-a', member_b_id: 'member-b' });
-    expect(store.isSettledPair('member-b')).toBe(true);
+    store.activeSettlements = [
+      {
+        id: 's-1',
+        household_id: 'hh-1',
+        member_a_id: 'member-a',
+        member_b_id: 'member-b',
+        settled_at: '2026-06-09 11:00:00.000Z',
+        created: '2026-06-09 11:00:00.000Z',
+        updated: '2026-06-09 11:00:00.000Z',
+      },
+    ];
     store.reset();
-    expect(store.isSettledPair('member-b')).toBe(false);
+    expect(store.activeSettlements).toHaveLength(0);
+  });
+
+  it('uses the latest settlement when multiple exist for the same pair', () => {
+    const store = useFinancesStore();
+    store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
+    // Two settlements: one old, one recent
+    store.activeSettlements = [
+      {
+        id: 's-old',
+        household_id: 'hh-1',
+        member_a_id: 'member-a',
+        member_b_id: 'member-b',
+        settled_at: '2026-06-01 00:00:00.000Z',
+        created: '2026-06-01 00:00:00.000Z',
+        updated: '2026-06-01 00:00:00.000Z',
+      },
+      {
+        id: 's-new',
+        household_id: 'hh-1',
+        member_a_id: 'member-a',
+        member_b_id: 'member-b',
+        settled_at: '2026-06-10 00:00:00.000Z',
+        created: '2026-06-10 00:00:00.000Z',
+        updated: '2026-06-10 00:00:00.000Z',
+      },
+    ];
+    // Expense between old and new settlement - should be EXCLUDED (predates latest)
+    store.expenses = [
+      makeExpense({
+        member_id: 'member-b',
+        amount: 8000,
+        portion: 50,
+        created: '2026-06-05 00:00:00.000Z',
+      }),
+    ];
+
+    expect(store.bilateralBalances[0]!.amount).toBe(0);
+  });
+});
+
+describe('bilateralBalances - join-date filter', () => {
+  it('excludes expenses created before the other member joined', () => {
+    const store = useFinancesStore();
+    // member-b joined AFTER the expense was created
+    store.members = [
+      makeMember('member-a', 'Alice'), // joined '2026-01-01T00:00:00Z'
+      { ...makeMember('member-b', 'Bob'), created: '2026-06-15T00:00:00Z' },
+    ];
+    // Expense created on 2026-06-01 - before member-b's join date
+    store.expenses = [
+      makeExpense({
+        member_id: 'member-a',
+        amount: 10000,
+        portion: 50,
+        created: '2026-06-01 00:00:00.000Z',
+      }),
+    ];
+
+    expect(store.bilateralBalances[0]!.amount).toBe(0);
+  });
+
+  it('excludes expenses created before the viewer joined', () => {
+    const store = useFinancesStore();
+    // viewer (member-a) joined late - after the expense
+    store.members = [
+      { ...makeMember('member-a', 'Alice'), created: '2026-06-15T00:00:00Z' },
+      makeMember('member-b', 'Bob'), // joined '2026-01-01T00:00:00Z'
+    ];
+    store.expenses = [
+      makeExpense({
+        member_id: 'member-b',
+        amount: 10000,
+        portion: 50,
+        created: '2026-06-01 00:00:00.000Z',
+      }),
+    ];
+
+    expect(store.bilateralBalances[0]!.amount).toBe(0);
+  });
+
+  it('includes expenses created after both members joined', () => {
+    const store = useFinancesStore();
+    store.members = [
+      { ...makeMember('member-a', 'Alice'), created: '2026-01-01T00:00:00Z' },
+      { ...makeMember('member-b', 'Bob'), created: '2026-01-02T00:00:00Z' },
+    ];
+    // Expense created well after both join dates
+    store.expenses = [
+      makeExpense({
+        member_id: 'member-a',
+        amount: 10000,
+        portion: 50,
+        created: '2026-06-01 00:00:00.000Z',
+      }),
+    ];
+
+    expect(store.bilateralBalances[0]!.amount).toBe(5000);
   });
 });
 

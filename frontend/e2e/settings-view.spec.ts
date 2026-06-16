@@ -58,7 +58,7 @@ test('settings form pre-fills with household data', async ({ page }) => {
   });
 });
 
-test('member list shows both members — current user first with "You" badge', async ({ page }) => {
+test('member list shows both members - current user first with "You" badge', async ({ page }) => {
   await test.step('Navigate to /settings', async () => {
     await page.goto('/settings');
     await page.waitForLoadState('networkidle');
