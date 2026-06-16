@@ -7,7 +7,7 @@ export interface Expense {
   portion: number; // integer percentage, e.g. 60 = 60%
   date: string; // PocketBase datetime string, e.g. "2026-05-25 00:00:00.000Z"
   created?: string;
-  updated?: string;
+  updated: string;
 }
 
 export interface Balance {

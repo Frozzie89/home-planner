@@ -43,7 +43,7 @@ export const useFinancesStore = defineStore('finances', () => {
     const otherMembers = members.value.filter((m) => m.id !== viewerMemberId);
 
     const viewerMember = members.value.find((m) => m.id === viewerMemberId);
-    const viewerJoinDate = viewerMember?.created ?? null;
+    const viewerJoinDate = viewerMember?.created?.replace('T', ' ') ?? null;
 
     // Hoist viewer-side invariants outside the per-expense loop
     const otherNonViewerIds = otherMembers.map((m) => m.id);
@@ -73,13 +73,9 @@ export const useFinancesStore = defineStore('finances', () => {
       const settlementCutoff = latestSettlement?.settled_at ?? null;
 
       for (const expense of expenses.value) {
-        const expTimestamp = (
-          expense.created ??
-          expense.date ??
-          '9999-12-31 23:59:59.999Z'
-        ).replace('T', ' ');
+        const expTimestamp = (expense.created ?? '9999-12-31 23:59:59.999Z').replace('T', ' ');
         if (viewerJoinDate !== null && expTimestamp < viewerJoinDate) continue;
-        if (expTimestamp < other.created) continue;
+        if (expTimestamp < other.created.replace('T', ' ')) continue;
         if (settlementCutoff !== null && expTimestamp <= settlementCutoff) continue;
 
         if (expense.member_id === viewerMemberId) {
