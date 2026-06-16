@@ -136,7 +136,7 @@ test('amount of 0 shows validation error and blocks submit', async ({ page }) =>
 
 // 3.2-E5: Failed POST reverts optimistic entry, shows inline error
 test('failed POST reverts optimistic expense and shows error banner', async ({ page }) => {
-  await test.step('set up mocks — POST returns 500', async () => {
+  await test.step('set up mocks - POST returns 500', async () => {
     await injectAuth(page);
     await mockRemainingPbCalls(page);
     await mockHouseholdsApi(page);

@@ -16,7 +16,7 @@ const PB_URL = 'http://pb.home-planner.localhost';
 const CALLBACK_PARAMS = `code=test-auth-code&state=${OAUTH_TEST_STATE}`;
 
 test('oauth2 callback: registered member is redirected to /finances', async ({ page }) => {
-  await test.step('Set up mocks — authenticated user with household membership', async () => {
+  await test.step('Set up mocks - authenticated user with household membership', async () => {
     await injectOAuthProviderSession(page);
     await mockRemainingPbCalls(page);
     await page.route(`${PB_URL}/api/collections/expenses/records*`, (route) =>
@@ -44,7 +44,7 @@ test('oauth2 callback: registered member is redirected to /finances', async ({ p
 test('oauth2 callback: unregistered user sees not-registered message on /auth', async ({
   page,
 }) => {
-  await test.step('Set up mocks — authenticated user with no household membership', async () => {
+  await test.step('Set up mocks - authenticated user with no household membership', async () => {
     await injectOAuthProviderSession(page);
     await mockRemainingPbCalls(page);
     // auth-methods needed because AuthView calls loadProviders() after rejecting the session
@@ -72,7 +72,7 @@ test('oauth2 callback: unregistered user sees not-registered message on /auth', 
 test('oauth2 callback: new user on an instance with no household is redirected to /setup', async ({
   page,
 }) => {
-  await test.step('Set up mocks — authenticated user, no household exists on instance', async () => {
+  await test.step('Set up mocks - authenticated user, no household exists on instance', async () => {
     await injectOAuthProviderSession(page);
     await mockRemainingPbCalls(page);
     await mockOAuth2CodeExchange(page);

@@ -6,7 +6,7 @@ migrate((app) => {
   settlements.listRule   = "@request.auth.members_via_user_id.household_id ?= household_id"
   settlements.viewRule   = "@request.auth.members_via_user_id.household_id ?= household_id"
   settlements.createRule = "@request.auth.members_via_user_id.household_id ?= household_id"
-  // updateRule and deleteRule remain null — settlements are immutable
+  // updateRule and deleteRule remain null - settlements are immutable
   app.save(settlements)
 }, (app) => {
   const settlements = app.findCollectionByNameOrId("settlements")
