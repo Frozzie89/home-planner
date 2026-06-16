@@ -75,7 +75,6 @@ async function injectSSEEvent(page: Page, action: string, record: MockExpense | 
   );
 }
 
-// 3.4-E1: New expense from another member appears after SSE create
 test('expense list updates when SSE create event is injected', async ({ page }) => {
   await test.step('set up mocks and navigate to finances', async () => {
     await setupMocks(page);
@@ -93,7 +92,6 @@ test('expense list updates when SSE create event is injected', async ({ page }) 
   });
 });
 
-// 3.4-E2: Balance updates when SSE create event injected
 test('balance updates when SSE create event is injected', async ({ page }) => {
   let initialAriaLabel = '';
 
@@ -114,7 +112,6 @@ test('balance updates when SSE create event is injected', async ({ page }) => {
   });
 });
 
-// 3.4-E3: Expense disappears from list after SSE delete event
 test('expense disappears from list after SSE delete event', async ({ page }) => {
   await test.step('set up mocks and navigate to finances', async () => {
     await setupMocks(page);

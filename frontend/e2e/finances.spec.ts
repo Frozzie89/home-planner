@@ -12,7 +12,6 @@ import {
   MOCK_MEMBER_ID_2,
 } from './helpers/auth';
 
-// 3.1-E1: Zero balance when no expenses
 test('balance card shows zero state when no expenses exist', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -34,7 +33,6 @@ test('balance card shows zero state when no expenses exist', async ({ page }) =>
   });
 });
 
-// 3.1-E2: Correct positive balance amount when viewer is owed money
 test('balance card shows correct positive amount when viewer is owed money', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -70,7 +68,6 @@ test('balance card shows correct positive amount when viewer is owed money', asy
   });
 });
 
-// 3.1-E4: Negative balance when viewer owes money
 test('balance card shows correct negative amount when viewer owes money', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -106,7 +103,6 @@ test('balance card shows correct negative amount when viewer owes money', async 
   });
 });
 
-// 3.1-E3: WCAG 2.1 AA - finances view with zero expenses
 test('finances view renders without WCAG 2.1 AA violations', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);

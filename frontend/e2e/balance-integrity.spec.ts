@@ -51,7 +51,6 @@ async function setupBase(page: Page) {
   );
 }
 
-// 3.7-E1: Settlement persists after page reload
 test('settlement state persists across page reload', async ({ page }) => {
   await test.step('set up mocks: Bob expense, existing settlement', async () => {
     await setupBase(page);
@@ -82,7 +81,6 @@ test('settlement state persists across page reload', async ({ page }) => {
   });
 });
 
-// 3.7-E2: New expense after settlement resurfaces balance
 test('new post-settlement expense resurfaces non-zero balance', async ({ page }) => {
   await test.step('set up mocks: settlement exists, then new expense added', async () => {
     await setupBase(page);
@@ -117,7 +115,6 @@ test('new post-settlement expense resurfaces non-zero balance', async ({ page })
   });
 });
 
-// 3.7-E3: New member sees zero balance (join-date filter)
 test('member who joined after expenses sees zero balance', async ({ page }) => {
   await test.step('set up mocks: existing expense predates Bob join date', async () => {
     await setupBase(page);
@@ -182,7 +179,6 @@ test('member who joined after expenses sees zero balance', async ({ page }) => {
   });
 });
 
-// 3.7-E4: Viewer who joined after expenses sees zero balance (viewer join-date filter)
 test('viewer who joined after expenses sees zero balance', async ({ page }) => {
   await test.step('set up mocks: existing expense predates viewer join date', async () => {
     await setupBase(page);

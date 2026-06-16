@@ -12,7 +12,6 @@ import {
   MOCK_MEMBER_ID,
 } from './helpers/auth';
 
-// 3.2-E1: FAB opens AddExpenseSheet
 test('FAB opens add expense sheet with title field visible', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -37,7 +36,6 @@ test('FAB opens add expense sheet with title field visible', async ({ page }) =>
   });
 });
 
-// 3.2-E2: Submit valid expense - appears in list optimistically
 test('submitting a valid expense adds it to the expense list', async ({ page }) => {
   const newExpense = {
     id: 'server-id-1',
@@ -81,7 +79,6 @@ test('submitting a valid expense adds it to the expense list', async ({ page }) 
   });
 });
 
-// 3.2-E3: Empty title shows validation error
 test('leaving title empty shows validation error and blocks submit', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -109,7 +106,6 @@ test('leaving title empty shows validation error and blocks submit', async ({ pa
   });
 });
 
-// 3.2-E4: Amount 0 shows validation error
 test('amount of 0 shows validation error and blocks submit', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
@@ -139,7 +135,6 @@ test('amount of 0 shows validation error and blocks submit', async ({ page }) =>
   });
 });
 
-// 3.2-E5: Failed POST reverts optimistic entry, shows inline error
 test('failed POST reverts optimistic expense and shows error banner', async ({ page }) => {
   await test.step('set up mocks - POST returns 500', async () => {
     await injectAuth(page);
@@ -168,7 +163,6 @@ test('failed POST reverts optimistic expense and shows error banner', async ({ p
   });
 });
 
-// 3.2-E6: WCAG 2.1 AA with form open
 test('add expense sheet has no WCAG 2.1 AA violations', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await injectAuth(page);
