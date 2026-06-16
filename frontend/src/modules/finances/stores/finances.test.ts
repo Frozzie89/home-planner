@@ -102,7 +102,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
-  // Default: no settlements — ensures all existing load tests pass without individual setup
+  // Default: no settlements - ensures all existing load tests pass without individual setup
   mockGetFullListSettlements.mockResolvedValue([]);
   // Restore defaults after each test
   sharedAuthState.memberId = 'member-a';
@@ -193,7 +193,7 @@ describe('bilateralBalances', () => {
     expect(cBalance?.amount).toBe(3400);
   });
 
-  it('uses integer arithmetic — no float intermediates stored', () => {
+  it('uses integer arithmetic - no float intermediates stored', () => {
     const store = useFinancesStore();
     store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
     // 4580 cents (€45.80) with 0% portion -> all 4580 goes to Bob
@@ -569,7 +569,7 @@ describe('applySSEEvent', () => {
     expect(store.expenses[1]!.id).toBe('exp-b');
   });
 
-  it('create action with existing id replaces the record (upsert — handles own write SSE echo)', () => {
+  it('create action with existing id replaces the record (upsert - handles own write SSE echo)', () => {
     const store = useFinancesStore();
     store.expenses = [EXPENSE_A];
 
@@ -731,7 +731,7 @@ describe('settleUp and isSettledPair', () => {
   it('excludes pre-settlement expenses with ISO T-separator created (addExpense optimistic format)', () => {
     const store = useFinancesStore();
     store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
-    // Optimistic expense: addExpense sets created via new Date().toISOString() — T separator
+    // Optimistic expense: addExpense sets created via new Date().toISOString() - T separator
     store.expenses = [
       {
         ...PRE_SETTLEMENT_EXPENSE,
@@ -754,15 +754,14 @@ describe('settleUp and isSettledPair', () => {
     expect(store.bilateralBalances[0]!.amount).toBe(0);
   });
 
-  it('excludes pre-settlement expenses when created is absent (legacy PocketBase records fall back to date)', () => {
+  it('includes expenses with absent created - sentinel puts them past any settlement cutoff (AC2: date must never be used)', () => {
     const store = useFinancesStore();
     store.members = [makeMember('member-a', 'Alice'), makeMember('member-b', 'Bob')];
-    // Simulates legacy PB records: created is absent, date is the expense date
     store.expenses = [
       {
         ...PRE_SETTLEMENT_EXPENSE,
-        created: undefined, // absent - the field PocketBase 0.27 omits for older records
-        date: '2026-06-09 00:00:00.000Z', // expense date used as fallback
+        created: undefined, // absent - sentinel '9999-12-31...' is used instead
+        date: '2026-06-09 00:00:00.000Z', // must NOT be used as fallback per AC2
       },
     ];
     store.activeSettlements = [
@@ -771,14 +770,14 @@ describe('settleUp and isSettledPair', () => {
         household_id: 'hh-1',
         member_a_id: 'member-a',
         member_b_id: 'member-b',
-        settled_at: '2026-06-09 11:00:00.000Z', // after the expense date
+        settled_at: '2026-06-09 11:00:00.000Z',
         created: '2026-06-09 11:00:00.000Z',
         updated: '2026-06-09 11:00:00.000Z',
       },
     ];
 
-    // The expense must be excluded using date as fallback since created is absent
-    expect(store.bilateralBalances[0]!.amount).toBe(0);
+    // Sentinel '9999-12-31...' is after any cutoff, so expense IS included
+    expect(store.bilateralBalances[0]!.amount).not.toBe(0);
   });
 
   it('isSettledPair returns false when post-settlement expense creates non-zero balance', () => {
@@ -879,7 +878,7 @@ describe('settleUp and isSettledPair', () => {
   });
 });
 
-describe('bilateralBalances — join-date filter', () => {
+describe('bilateralBalances - join-date filter', () => {
   it('excludes expenses created before the other member joined', () => {
     const store = useFinancesStore();
     // member-b joined AFTER the expense was created
