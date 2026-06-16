@@ -7,6 +7,7 @@ import {
   mockSettingsMembersApi,
   mockHouseholdsApi,
   mockExpensesApi,
+  mockSettlementsApi,
   mockExpenseUpdateApi,
   mockExpenseDeleteApi,
   MOCK_HOUSEHOLD_ID,
@@ -45,6 +46,7 @@ async function setupMocks(page: Page, options: { currentUserRole?: 'admin' | 'me
   await mockHouseholdsApi(page);
   await mockSettingsMembersApi(page, options);
   await mockExpensesApi(page, [VIEWER_EXPENSE, BOB_EXPENSE]);
+  await mockSettlementsApi(page, []);
 }
 
 // 3.3-E1: Expense list renders with correct data
@@ -213,6 +215,7 @@ test('empty state appears after last expense is deleted', async ({ page }) => {
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, [VIEWER_EXPENSE]);
+    await mockSettlementsApi(page, []);
     await mockExpenseDeleteApi(page, 'exp-viewer');
   });
   await test.step('navigate to finances', async () => {

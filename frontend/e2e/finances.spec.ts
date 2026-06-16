@@ -6,6 +6,7 @@ import {
   mockSettingsMembersApi,
   mockHouseholdsApi,
   mockExpensesApi,
+  mockSettlementsApi,
   MOCK_HOUSEHOLD_ID,
   MOCK_MEMBER_ID,
   MOCK_MEMBER_ID_2,
@@ -19,6 +20,7 @@ test('balance card shows zero state when no expenses exist', async ({ page }) =>
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {
@@ -54,6 +56,7 @@ test('balance card shows correct positive amount when viewer is owed money', asy
         updated: '2026-06-01 00:00:00.000Z',
       },
     ]);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {
@@ -89,6 +92,7 @@ test('balance card shows correct negative amount when viewer owes money', async 
         updated: '2026-06-02 00:00:00.000Z',
       },
     ]);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {
@@ -110,6 +114,7 @@ test('finances view renders without WCAG 2.1 AA violations', async ({ page }) =>
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {

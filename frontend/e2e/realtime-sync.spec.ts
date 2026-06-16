@@ -5,6 +5,7 @@ import {
   mockHouseholdsApi,
   mockSettingsMembersApi,
   mockExpensesApi,
+  mockSettlementsApi,
   MOCK_HOUSEHOLD_ID,
   MOCK_MEMBER_ID,
   MOCK_MEMBER_ID_2,
@@ -43,6 +44,7 @@ async function setupMocks(page: Page) {
   await mockHouseholdsApi(page);
   await mockSettingsMembersApi(page);
   await mockExpensesApi(page, [EXISTING_EXPENSE]);
+  await mockSettlementsApi(page, []);
   // Intercept SSE realtime endpoint - return a minimal connect event and keep open
   await page.route(`${PB_URL}/api/realtime*`, (route) => {
     route.fulfill({

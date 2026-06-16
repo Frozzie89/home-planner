@@ -6,6 +6,7 @@ import {
   mockSettingsMembersApi,
   mockHouseholdsApi,
   mockExpensesApi,
+  mockSettlementsApi,
   mockExpensesCreateApi,
   MOCK_HOUSEHOLD_ID,
   MOCK_MEMBER_ID,
@@ -20,6 +21,7 @@ test('FAB opens add expense sheet with title field visible', async ({ page }) =>
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate to finances', async () => {
@@ -55,6 +57,7 @@ test('submitting a valid expense adds it to the expense list', async ({ page }) 
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
     await mockExpensesCreateApi(page, newExpense);
   });
 
@@ -86,6 +89,7 @@ test('leaving title empty shows validation error and blocks submit', async ({ pa
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate and open sheet', async () => {
@@ -113,6 +117,7 @@ test('amount of 0 shows validation error and blocks submit', async ({ page }) =>
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate and open sheet', async () => {
@@ -142,6 +147,7 @@ test('failed POST reverts optimistic expense and shows error banner', async ({ p
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
     await mockExpensesCreateApi(page, {} as never, { failWithStatus: 500 });
   });
 
@@ -170,6 +176,7 @@ test('add expense sheet has no WCAG 2.1 AA violations', async ({ page }) => {
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, []);
+    await mockSettlementsApi(page, []);
   });
 
   await test.step('navigate and open sheet', async () => {
