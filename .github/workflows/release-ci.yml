@@ -1,0 +1,46 @@
+name: Release CI
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-frontend:
+    name: Build Frontend (dry run)
+    runs-on: ubuntu-latest
+    if: github.head_ref == 'dev'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          platforms: linux/amd64,linux/arm64
+          push: false
+
+  build-pocketbase:
+    name: Build PocketBase (dry run)
+    runs-on: ubuntu-latest
+    if: github.head_ref == 'dev'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./pocketbase
+          platforms: linux/amd64,linux/arm64
+          push: false
