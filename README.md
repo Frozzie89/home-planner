@@ -39,7 +39,7 @@ Built for personal use, with a focus on being lightweight, easy to use, and self
 
 ```sh
 cp .env.example .env
-# Edit .env et set environment keys
+# Edit .env and set environment keys
 docker compose up -d
 ```
 
