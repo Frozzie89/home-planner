@@ -14,6 +14,7 @@ import FinancesSection from '@/modules/household/components/FinancesSection.vue'
 import FoodSection from '@/modules/household/components/FoodSection.vue';
 import MembersSection from '@/modules/household/components/MembersSection.vue';
 import HouseholdDangerZone from '@/modules/household/components/HouseholdDangerZone.vue';
+import AppVersion from '@/shared/components/AppVersion.vue';
 
 const authStore = useAuthStore();
 const householdStore = useHouseholdStore();
@@ -237,6 +238,7 @@ async function handleSave() {
         <button class="retry-btn" @click="loadSettings">Try again</button>
       </p>
     </template>
+    <AppVersion />
   </div>
   <Toast />
 </template>

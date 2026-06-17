@@ -7,6 +7,9 @@ import vueDevTools from 'vite-plugin-vue-devtools';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(), vueDevTools()],
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? 'unknown'),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
