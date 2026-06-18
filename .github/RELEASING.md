@@ -35,8 +35,8 @@ A release is then cut by pushing a version tag from `main`.
    - Push both images to DockerHub with the `:v1.2.3` tag (`:latest` is promoted
      separately after both builds succeed, and only for stable tags without a
      pre-release suffix)
-   - Generate a `docker-compose.prod.yml` referencing the released images
-   - Create a GitHub Release with `docker-compose.prod.yml` and `.env.example` attached
+   - Generate a `compose.yml` referencing the released images
+   - Create a GitHub Release with `compose.yml` and `.env.example` attached
 
 5. Verify the release in the GitHub Actions tab and on DockerHub before announcing:
 
@@ -47,7 +47,7 @@ A release is then cut by pushing a version tag from `main`.
 
    Both should show manifests for `linux/amd64` and `linux/arm64`.
 
-6. **Before running the production compose:** the generated `docker-compose.prod.yml`
+6. **Before running the production compose:** the generated `compose.yml`
    includes the Traefik dashboard on port 8080 with `--api.insecure=true`. This is fine
    for a home network but remove the `ports: ["8080:8080"]` entry and the
    `--api.insecure=true` command if the instance is exposed to the internet.

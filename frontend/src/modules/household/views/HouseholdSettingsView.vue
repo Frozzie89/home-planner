@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
 import InputText from 'primevue/inputtext';
-import InputNumber from 'primevue/inputnumber';
-import Select from 'primevue/select';
 import Button from 'primevue/button';
 import Skeleton from 'primevue/skeleton';
 import Toast from 'primevue/toast';
@@ -13,37 +10,12 @@ import { useAuthStore } from '@/shared/stores/auth';
 import { useHouseholdStore } from '@/modules/household/stores/household';
 import type { Household } from '@/shared/types';
 import type { MemberRecord } from '@/modules/household/types';
-import { getMemberName } from '@/shared/lib/memberHelpers';
-import MemberList from '@/modules/household/components/MemberList.vue';
-import UserAvatar from '@/shared/components/UserAvatar.vue';
-import BottomSheet from '@/shared/components/BottomSheet.vue';
+import FinancesSection from '@/modules/household/components/FinancesSection.vue';
+import FoodSection from '@/modules/household/components/FoodSection.vue';
+import MembersSection from '@/modules/household/components/MembersSection.vue';
+import HouseholdDangerZone from '@/modules/household/components/HouseholdDangerZone.vue';
+import AppVersion from '@/shared/components/AppVersion.vue';
 
-const CURRENCY_OPTIONS = [
-  { code: 'AUD', label: 'AUD — Australian Dollar' },
-  { code: 'CAD', label: 'CAD — Canadian Dollar' },
-  { code: 'CHF', label: 'CHF — Swiss Franc' },
-  { code: 'DKK', label: 'DKK — Danish Krone' },
-  { code: 'EUR', label: 'EUR — Euro' },
-  { code: 'GBP', label: 'GBP — British Pound' },
-  { code: 'JPY', label: 'JPY — Japanese Yen' },
-  { code: 'NOK', label: 'NOK — Norwegian Krone' },
-  { code: 'NZD', label: 'NZD — New Zealand Dollar' },
-  { code: 'SEK', label: 'SEK — Swedish Krona' },
-  { code: 'SGD', label: 'SGD — Singapore Dollar' },
-  { code: 'USD', label: 'USD — US Dollar' },
-];
-
-const REMINDER_DAY_OPTIONS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
-
-const router = useRouter();
 const authStore = useAuthStore();
 const householdStore = useHouseholdStore();
 const toast = useToast();
@@ -67,31 +39,9 @@ const originalData = ref<{
 
 const nameError = ref('');
 
-// Member management state
-const showInviteSheet = ref(false);
-const showRemoveSheet = ref(false);
-const memberToRemove = ref<MemberRecord | null>(null);
-const inviteLink = ref('');
-const inviteCopied = ref(false);
-const inviteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
-let inviteCopiedTimer: ReturnType<typeof setTimeout> | null = null;
-const removeStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
-
-// Role management state
-const showPromoteSheet = ref(false);
-const showDemoteSheet = ref(false);
-const showDeleteHouseholdSheet = ref(false);
-const memberToPromote = ref<MemberRecord | null>(null);
-const memberToDemote = ref<MemberRecord | null>(null);
-const promoteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
-const demoteStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
-const deleteHouseholdStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
-const lastAdminError = ref('');
-
 const splitRatioSum = computed(() =>
   Object.values(splitRatioForm.value).reduce((sum, v) => sum + (v ?? 0), 0)
 );
-
 const isSplitRatioValid = computed(() => splitRatioSum.value === 100);
 
 const sortedMembers = computed(() =>
@@ -151,7 +101,7 @@ async function loadSettings() {
     for (const member of membersList) {
       splitRatioForm.value[member.id] = ratios[member.id] ?? 0;
     }
-    // Single-member: always 100 — InputNumber is disabled; DB may have 0 if never explicitly set
+    // Single-member: always 100 - InputNumber is disabled; DB may have 0 if never explicitly set
     if (membersList.length === 1 && membersList[0]) {
       splitRatioForm.value[membersList[0].id] = 100;
     }
@@ -179,178 +129,6 @@ watch(
   },
   { deep: true }
 );
-
-function handleRemoveMemberRequest(member: MemberRecord) {
-  lastAdminError.value = '';
-  if (member.role === 'admin' && adminCount.value === 1) {
-    lastAdminError.value = 'At least one admin must remain in the household';
-    return;
-  }
-  memberToRemove.value = member;
-  showRemoveSheet.value = true;
-}
-
-function closeRemoveSheet() {
-  showRemoveSheet.value = false;
-  memberToRemove.value = null;
-  removeStatus.value = 'idle';
-}
-
-async function handleRemoveConfirm() {
-  if (!memberToRemove.value || removeStatus.value === 'loading') return;
-  removeStatus.value = 'loading';
-  try {
-    await pb.collection('members').delete(memberToRemove.value.id);
-    lastAdminError.value = '';
-    closeRemoveSheet();
-    await loadSettings();
-    toast.add({ severity: 'success', summary: 'Member removed', life: 3000 });
-  } catch {
-    toast.add({ severity: 'error', summary: "Couldn't remove member — try again", life: 5000 });
-    removeStatus.value = 'error';
-  }
-}
-
-function closePromoteSheet() {
-  showPromoteSheet.value = false;
-  memberToPromote.value = null;
-  promoteStatus.value = 'idle';
-}
-
-function handlePromoteRequest(member: MemberRecord) {
-  memberToPromote.value = member;
-  showPromoteSheet.value = true;
-}
-
-async function handlePromoteConfirm() {
-  if (!memberToPromote.value || promoteStatus.value === 'loading') return;
-  promoteStatus.value = 'loading';
-  try {
-    await pb.collection('members').update(memberToPromote.value.id, { role: 'admin' });
-    lastAdminError.value = '';
-    closePromoteSheet();
-    await loadSettings();
-    toast.add({ severity: 'success', summary: 'Member promoted to Admin', life: 3000 });
-  } catch {
-    toast.add({ severity: 'error', summary: "Couldn't promote member — try again", life: 5000 });
-    promoteStatus.value = 'error';
-  }
-}
-
-function closeDemoteSheet() {
-  showDemoteSheet.value = false;
-  memberToDemote.value = null;
-  demoteStatus.value = 'idle';
-}
-
-function handleDemoteRequest(member: MemberRecord) {
-  lastAdminError.value = '';
-  if (member.user_id === authStore.userId && adminCount.value === 1) {
-    lastAdminError.value = 'At least one admin must remain in the household';
-    return;
-  }
-  memberToDemote.value = member;
-  showDemoteSheet.value = true;
-}
-
-async function handleDemoteConfirm() {
-  if (!memberToDemote.value || demoteStatus.value === 'loading') return;
-  demoteStatus.value = 'loading';
-  try {
-    const isSelf = memberToDemote.value.user_id === authStore.userId;
-    await pb.collection('members').update(memberToDemote.value.id, { role: 'member' });
-    closeDemoteSheet();
-    await loadSettings();
-    toast.add({ severity: 'success', summary: 'Admin demoted to Member', life: 3000 });
-    if (isSelf) {
-      await authStore.loadMembership();
-    }
-  } catch {
-    toast.add({ severity: 'error', summary: "Couldn't demote admin — try again", life: 5000 });
-    demoteStatus.value = 'error';
-  }
-}
-
-function closeDeleteHouseholdSheet() {
-  showDeleteHouseholdSheet.value = false;
-  deleteHouseholdStatus.value = 'idle';
-}
-
-function handleDeleteHouseholdRequest() {
-  showDeleteHouseholdSheet.value = true;
-}
-
-async function handleDeleteHouseholdConfirm() {
-  if (deleteHouseholdStatus.value === 'loading') return;
-  deleteHouseholdStatus.value = 'loading';
-  try {
-    await pb.send('/api/household', { method: 'DELETE' });
-    closeDeleteHouseholdSheet();
-    await authStore.loadMembership();
-    await router.push('/setup');
-  } catch {
-    toast.add({ severity: 'error', summary: "Couldn't delete household — try again", life: 5000 });
-    deleteHouseholdStatus.value = 'error';
-  }
-}
-
-function closeInviteSheet() {
-  showInviteSheet.value = false;
-  inviteLink.value = '';
-  inviteCopied.value = false;
-  inviteStatus.value = 'idle';
-  if (inviteCopiedTimer !== null) {
-    clearTimeout(inviteCopiedTimer);
-    inviteCopiedTimer = null;
-  }
-}
-
-async function handleInviteOpen() {
-  if (!authStore.householdId) return;
-  if (inviteStatus.value === 'loading') return;
-  inviteStatus.value = 'loading';
-  try {
-    // Reuse an existing unaccepted invite to avoid accumulating orphaned tokens
-    let token: string;
-    try {
-      const existing = await pb.collection('invitations').getFirstListItem<{
-        token: string;
-      }>(pb.filter('household_id = {:hid} && accepted = false', { hid: authStore.householdId }));
-      token = existing['token'];
-    } catch (e: any) {
-      if (e?.status !== 404) throw e;
-      // No existing invite — create one
-      const record = await pb.collection('invitations').create<{ token: string }>({
-        household_id: authStore.householdId,
-      });
-      token = record['token'];
-    }
-    inviteLink.value = `${window.location.origin}/invite/${token}`;
-    inviteStatus.value = 'success';
-    showInviteSheet.value = true;
-  } catch {
-    toast.add({
-      severity: 'error',
-      summary: "Couldn't generate invite link — try again",
-      life: 5000,
-    });
-    inviteStatus.value = 'error';
-  }
-}
-
-async function copyInviteLink() {
-  try {
-    await navigator.clipboard.writeText(inviteLink.value);
-    inviteCopied.value = true;
-    if (inviteCopiedTimer !== null) clearTimeout(inviteCopiedTimer);
-    inviteCopiedTimer = setTimeout(() => {
-      inviteCopied.value = false;
-      inviteCopiedTimer = null;
-    }, 1500);
-  } catch {
-    // clipboard may be unavailable in some environments
-  }
-}
 
 async function handleSave() {
   validateName();
@@ -385,7 +163,7 @@ async function handleSave() {
     toast.add({ severity: 'success', summary: 'Household preferences saved', life: 3000 });
     saveStatus.value = 'success';
   } catch {
-    toast.add({ severity: 'error', summary: "Couldn't save — try again", life: 5000 });
+    toast.add({ severity: 'error', summary: "Couldn't save - try again", life: 5000 });
     saveStatus.value = 'error';
   }
 }
@@ -423,102 +201,26 @@ async function handleSave() {
         </div>
 
         <!-- FINANCES -->
-        <div class="pref-section">
-          <p class="section-label">FINANCES</p>
-          <div class="pref-card">
-            <label class="field-label-upper" for="currency">DISPLAY CURRENCY</label>
-            <Select
-              id="currency"
-              v-model="formData.currency"
-              :options="CURRENCY_OPTIONS"
-              option-label="label"
-              option-value="code"
-            />
-          </div>
-          <div class="pref-card">
-            <p class="field-label-upper">DEFAULT SPLIT RATIO</p>
-            <div v-for="member in sortedMembers" :key="member.id" class="split-row">
-              <div class="member-name-group">
-                <UserAvatar :size="28" :user-record="member.expand?.user_id" />
-                <span class="member-name">{{ getMemberName(member) }}</span>
-              </div>
-              <div class="split-input-group">
-                <InputNumber
-                  v-model="splitRatioForm[member.id]"
-                  :disabled="isSingleMember"
-                  :min="0"
-                  :max="100"
-                  :max-fraction-digits="0"
-                  :aria-label="`${getMemberName(member)} split ratio percentage`"
-                />
-                <span class="pct-sign">%</span>
-              </div>
-            </div>
-            <div
-              class="split-sum"
-              :class="{ valid: isSplitRatioValid, invalid: !isSplitRatioValid }"
-            >
-              {{ splitRatioSum }} / 100
-              <span v-if="isSplitRatioValid"> ✓</span>
-              <span v-else> — adjust to reach 100</span>
-            </div>
-          </div>
-        </div>
+        <FinancesSection
+          v-model:currency="formData.currency"
+          v-model:split-ratios="splitRatioForm"
+          :members="sortedMembers"
+          :is-single-member="isSingleMember"
+        />
 
         <!-- FOOD -->
-        <div class="pref-section">
-          <p class="section-label">FOOD</p>
-          <div class="pref-card">
-            <label class="field-label-upper" for="reminder-day">PLANNING REMINDER DAY</label>
-            <Select
-              id="reminder-day"
-              v-model="formData.reminder_day"
-              :options="REMINDER_DAY_OPTIONS"
-            />
-          </div>
-        </div>
+        <FoodSection v-model:reminder-day="formData.reminder_day" />
 
         <!-- MEMBERS -->
-        <div class="pref-section">
-          <p class="section-label">MEMBERS</p>
-          <div class="pref-card members-card">
-            <MemberList
-              :members="members"
-              :current-user-id="authStore.userId ?? ''"
-              @remove="handleRemoveMemberRequest"
-              @promote="handlePromoteRequest"
-              @demote="handleDemoteRequest"
-            />
-            <p v-if="lastAdminError" class="last-admin-error" role="alert">{{ lastAdminError }}</p>
-            <Button
-              label="Invite member"
-              class="invite-btn"
-              outlined
-              :loading="inviteStatus === 'loading'"
-              @click="handleInviteOpen"
-            />
-          </div>
-        </div>
+        <MembersSection
+          :members="members"
+          :current-user-id="authStore.userId ?? ''"
+          :admin-count="adminCount"
+          @changed="loadSettings"
+        />
 
         <!-- DANGER ZONE -->
-        <template v-if="isSoleMember">
-          <div class="pref-section">
-            <p class="section-label danger-section">DANGER ZONE</p>
-            <div class="danger-zone">
-              <p class="danger-description">
-                You are the only member of this household. Deleting it is permanent and cannot be
-                undone.
-              </p>
-              <Button
-                label="Delete household"
-                severity="danger"
-                outlined
-                class="delete-household-btn"
-                @click="handleDeleteHouseholdRequest"
-              />
-            </div>
-          </div>
-        </template>
+        <HouseholdDangerZone v-if="isSoleMember" />
 
         <Button
           label="Save Changes"
@@ -536,84 +238,8 @@ async function handleSave() {
         <button class="retry-btn" @click="loadSettings">Try again</button>
       </p>
     </template>
+    <AppVersion />
   </div>
-  <BottomSheet v-model:open="showInviteSheet" title="Invite member">
-    <div class="form-field">
-      <label for="invite-link">Share this link</label>
-      <InputText id="invite-link" :model-value="inviteLink" readonly />
-    </div>
-    <div class="sheet-actions">
-      <Button :label="inviteCopied ? 'Copied!' : 'Copy link'" outlined @click="copyInviteLink" />
-      <Button label="Done" @click="closeInviteSheet" />
-    </div>
-  </BottomSheet>
-
-  <BottomSheet v-model:open="showRemoveSheet" title="Remove member">
-    <p class="confirm-text">
-      Remove <strong>{{ memberToRemove ? getMemberName(memberToRemove) : '' }}</strong> from the
-      household? They will lose access immediately.
-    </p>
-    <div class="sheet-actions">
-      <Button label="Cancel" text @click="closeRemoveSheet" />
-      <Button
-        label="Remove"
-        severity="danger"
-        :loading="removeStatus === 'loading'"
-        @click="handleRemoveConfirm"
-      />
-    </div>
-  </BottomSheet>
-
-  <BottomSheet v-model:open="showPromoteSheet" title="Promote to Admin">
-    <p class="confirm-text">
-      Promote <strong>{{ memberToPromote ? getMemberName(memberToPromote) : '' }}</strong> to Admin?
-      They will be able to invite members, manage roles, and change household preferences.
-    </p>
-    <div class="sheet-actions">
-      <Button label="Cancel" text @click="closePromoteSheet" />
-      <Button
-        label="Promote"
-        :loading="promoteStatus === 'loading'"
-        @click="handlePromoteConfirm"
-      />
-    </div>
-  </BottomSheet>
-
-  <BottomSheet v-model:open="showDemoteSheet" title="Demote to Member">
-    <p class="confirm-text">
-      Demote <strong>{{ memberToDemote ? getMemberName(memberToDemote) : '' }}</strong> to Member?
-      They will no longer be able to manage members or household preferences.
-    </p>
-    <div class="sheet-actions">
-      <Button label="Cancel" text @click="closeDemoteSheet" />
-      <Button
-        label="Demote"
-        severity="danger"
-        :loading="demoteStatus === 'loading'"
-        @click="handleDemoteConfirm"
-      />
-    </div>
-  </BottomSheet>
-
-  <BottomSheet v-model:open="showDeleteHouseholdSheet" title="Delete Household">
-    <p class="confirm-text">
-      <strong>This action is permanent and cannot be undone.</strong>
-    </p>
-    <p class="confirm-text">
-      All expenses, meal plans, grocery lists, invitations, and member data for this household will
-      be permanently deleted. There is no recovery.
-    </p>
-    <div class="sheet-actions">
-      <Button label="Cancel" text @click="closeDeleteHouseholdSheet" />
-      <Button
-        label="Delete household"
-        severity="danger"
-        :loading="deleteHouseholdStatus === 'loading'"
-        @click="handleDeleteHouseholdConfirm"
-      />
-    </div>
-  </BottomSheet>
-
   <Toast />
 </template>
 
@@ -632,8 +258,6 @@ async function handleSave() {
   color: var(--color-text-primary);
   margin: 0;
 }
-
-/* Section layout */
 
 .pref-sections {
   display: flex;
@@ -688,130 +312,9 @@ async function handleSave() {
   background-color: color-mix(in srgb, var(--color-balance-negative) 8%, transparent);
 }
 
-/* Split ratio */
-
-.split-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.member-name-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0; /* allow truncation in flex */
-}
-
-.member-name {
-  font-size: 0.875rem;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.split-input-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.split-input-group :deep(.p-inputnumber-input) {
-  width: 72px;
-}
-
-.pct-sign {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-}
-
-.split-sum {
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding-top: var(--space-1);
-  border-top: 1px solid var(--p-surface-border);
-}
-
-.split-sum.valid {
-  color: color-mix(in srgb, var(--color-balance-positive, #4a9068), black 30%);
-}
-
-.split-sum.invalid {
-  color: color-mix(in srgb, var(--color-balance-negative, #c96148), black 30%);
-}
-
-/* Members card */
-
-.members-card {
-  gap: var(--space-1);
-}
-
-.invite-btn {
-  width: 100%;
-  margin-top: var(--space-1);
-}
-
-:deep(.invite-btn .p-button-label) {
-  color: color-mix(in srgb, var(--p-primary-color), black 30%);
-}
-
-.last-admin-error {
-  font-size: 0.875rem;
-  color: var(--color-balance-negative);
-  margin: 0;
-}
-
-/* Danger zone */
-
-.danger-section {
-  color: var(--color-balance-negative);
-}
-
-.danger-zone {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  border: 1px solid color-mix(in srgb, var(--color-balance-negative) 30%, transparent);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--color-balance-negative) 5%, transparent);
-}
-
-.danger-description {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  margin: 0;
-  line-height: 1.5;
-}
-
-.delete-household-btn {
-  width: 100%;
-}
-
-/* Save button */
-
 .save-btn {
   width: 100%;
 }
-
-/* Sheet form fields */
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field label {
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: var(--color-text-primary);
-}
-
-/* Error state */
 
 .fetch-error {
   font-size: 0.875rem;
@@ -832,22 +335,6 @@ async function handleSave() {
 
 .mb-3 {
   margin-bottom: 0.75rem;
-}
-
-/* Bottom sheets */
-
-.sheet-actions {
-  display: flex;
-  gap: var(--space-1);
-  justify-content: flex-end;
-  margin-top: var(--space-2);
-}
-
-.confirm-text {
-  font-size: 0.875rem;
-  color: var(--color-text-primary);
-  margin: 0;
-  line-height: 1.5;
 }
 
 @media (min-width: 768px) {

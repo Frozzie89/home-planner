@@ -7,7 +7,7 @@ const { mockGetFileUrl } = vi.hoisted(() => ({
   mockGetFileUrl: vi.fn(),
 }));
 
-// Module-level reactive record — getter in mock closes over this by reference
+// Module-level reactive record - getter in mock closes over this by reference
 const mockRecord = ref<Record<string, unknown> | null>(null);
 
 // Capture the onChange callback so tests can trigger it directly
@@ -101,7 +101,7 @@ describe('UserAvatar', () => {
     expect(wrapper.find('span').text()).toBe('?');
   });
 
-  it('background color is deterministic — same id always yields the same color', () => {
+  it('background color is deterministic - same id always yields the same color', () => {
     mockRecord.value = { id: 'abc', avatar: '', name: 'Test' };
 
     const wrapper1 = mount(UserAvatar);
@@ -111,7 +111,7 @@ describe('UserAvatar', () => {
     const color2 = wrapper2.find('span').attributes('style');
 
     expect(color1).toBe(color2);
-    // jsdom normalizes hex to rgb() — just verify a background-color is present
+    // jsdom normalizes hex to rgb() - just verify a background-color is present
     expect(color1).toMatch(/background-color:/);
   });
 

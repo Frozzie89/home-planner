@@ -6,7 +6,7 @@ export interface Expense {
   amount: number; // integer cents, e.g. 4580 = €45.80
   portion: number; // integer percentage, e.g. 60 = 60%
   date: string; // PocketBase datetime string, e.g. "2026-05-25 00:00:00.000Z"
-  created: string;
+  created?: string;
   updated: string;
 }
 
@@ -19,6 +19,16 @@ export interface Balance {
 export interface SettleUpPayload {
   member_a_id: string;
   member_b_id: string;
+}
+
+export interface Settlement {
+  id: string;
+  household_id: string;
+  member_a_id: string; // relation to members
+  member_b_id: string; // relation to members
+  settled_at: string; // PocketBase datetime string, space-separator format
+  created: string;
+  updated: string;
 }
 
 export interface NewExpensePayload {

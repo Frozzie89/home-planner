@@ -97,7 +97,7 @@ onUnmounted(cancelLongPress);
       <span class="expense-share">Your share {{ formattedShare }}</span>
     </div>
 
-    <!-- Edit / Delete actions — revealed on hover (desktop) or long-press (mobile) -->
+    <!-- Edit / Delete actions - revealed on hover (desktop) or long-press (mobile) -->
     <div v-if="canModify" class="expense-actions">
       <button type="button" class="action-btn" aria-label="Edit expense" @click.stop="emit('edit')">
         <i class="pi pi-pencil" />
@@ -195,7 +195,7 @@ onUnmounted(cancelLongPress);
   white-space: nowrap;
 }
 
-/* Actions overlay — hidden by default, revealed on hover or long-press */
+/* Actions overlay - hidden by default, revealed on hover or long-press */
 
 .expense-actions {
   position: absolute;

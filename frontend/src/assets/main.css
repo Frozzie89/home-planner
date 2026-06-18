@@ -23,7 +23,7 @@
   --color-text-secondary: #6b6560;
 }
 
-/* Dark mode overrides — toggled by .p-dark class on <html> */
+/* Dark mode overrides - toggled by .p-dark class on <html> */
 .p-dark {
   --p-primary: #7ab893;
   --p-accent: #e8935f;
@@ -50,7 +50,7 @@ body {
   color: var(--color-text-primary);
 }
 
-/* Global accessibility baseline — 48px minimum touch targets; excludes PrimeVue internals */
+/* Global accessibility baseline - 48px minimum touch targets; excludes PrimeVue internals */
 button:not([class*='p-']),
 a:not([class*='p-']),
 [role='button']:not([class*='p-']),

@@ -8,6 +8,8 @@ Commit messages follow the [Conventional Commits](https://www.conventionalcommit
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-16
+
 ### Added
 - Settle-up flow: calculate and record debt settlements between household members
 - Real-time expense sync via SSE with animated balance updates

@@ -22,7 +22,7 @@ function makeBalance(amount: number): Balance {
   return { member_a_id: 'member-a', member_b_id: 'member-b', amount };
 }
 
-describe('BalanceCard — slim card states', () => {
+describe('BalanceCard - slim card states', () => {
   it('renders positive amount with amt-positive class and Settle up button', () => {
     const wrapper = mount(BalanceCard, {
       props: { balance: makeBalance(4580), otherMember: makeMember(), currency: 'EUR' },
@@ -137,7 +137,7 @@ describe('BalanceCard — slim card states', () => {
     expect(wrapper.find('.slim-name').text()).toBe('Alice');
   });
 
-  it('uses getMemberName — display_name takes priority', () => {
+  it('uses getMemberName - display_name takes priority', () => {
     const wrapper = mount(BalanceCard, {
       props: {
         balance: makeBalance(1000),
@@ -211,7 +211,7 @@ describe('BalanceCard — slim card states', () => {
   });
 });
 
-describe('BalanceCard — animated display amount', () => {
+describe('BalanceCard - animated display amount', () => {
   it('initializes displayedAmount from the initial balance prop', () => {
     const wrapper = mount(BalanceCard, {
       props: { balance: makeBalance(5000), otherMember: makeMember(), currency: 'EUR' },

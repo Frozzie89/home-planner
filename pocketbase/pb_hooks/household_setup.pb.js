@@ -3,7 +3,7 @@
 /// POST /api/household/complete-setup
 /// Creates the first admin member record for the authenticated user.
 /// Called by HouseholdSetupView after creating the household.
-/// members.createRule = null, so direct SDK creation is blocked — this hook is the only path.
+/// members.createRule = null, so direct SDK creation is blocked - this hook is the only path.
 routerAdd('POST', '/api/household/complete-setup', (e) => {
   try {
     const body = e.requestInfo().body

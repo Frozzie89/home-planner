@@ -5,8 +5,8 @@ import { pb } from '@/shared/lib/pocketbase';
 
 declare module 'vue-router' {
   interface RouteMeta {
-    public?: boolean;
-    shellExcluded?: boolean;
+    public?: boolean; // skip the auth guard; authenticated users are redirected away (except invite-accept)
+    shellExcluded?: boolean; // render without AppShell - no nav bar or chrome
   }
 }
 
@@ -73,6 +73,7 @@ const router = createRouter({
   ],
 });
 
+/** Global guard: init auth, then enforce unauthenticated -> /auth, no household -> /setup, /settings requires admin. */
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
   const householdStore = useHouseholdStore();
@@ -85,7 +86,7 @@ router.beforeEach(async (to) => {
     try {
       await householdStore.load(authStore.householdId);
     } catch {
-      // Non-critical — household name in nav bar stays empty if the fetch fails
+      // Non-critical - household name in nav bar stays empty if the fetch fails
     }
   }
 

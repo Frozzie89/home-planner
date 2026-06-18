@@ -11,6 +11,7 @@ import { useAuthStore } from '@/shared/stores/auth';
 import { useHouseholdStore } from '@/modules/household/stores/household';
 import UserAvatar from '@/shared/components/UserAvatar.vue';
 import BottomSheet from '@/shared/components/BottomSheet.vue';
+import AppVersion from '@/shared/components/AppVersion.vue';
 import type { MemberRecord } from '@/modules/household/types';
 
 const authStore = useAuthStore();
@@ -239,6 +240,7 @@ async function save() {
         class="save-btn"
       />
     </form>
+    <AppVersion />
   </div>
 </template>
 

@@ -7,6 +7,7 @@ import {
   mockSettingsMembersApi,
   mockHouseholdsApi,
   mockExpensesApi,
+  mockSettlementsApi,
   mockExpenseUpdateApi,
   mockExpenseDeleteApi,
   MOCK_HOUSEHOLD_ID,
@@ -45,9 +46,9 @@ async function setupMocks(page: Page, options: { currentUserRole?: 'admin' | 'me
   await mockHouseholdsApi(page);
   await mockSettingsMembersApi(page, options);
   await mockExpensesApi(page, [VIEWER_EXPENSE, BOB_EXPENSE]);
+  await mockSettlementsApi(page, []);
 }
 
-// 3.3-E1: Expense list renders with correct data
 test('expense list renders title, amount, and member name', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await setupMocks(page);
@@ -64,7 +65,6 @@ test('expense list renders title, amount, and member name', async ({ page }) => 
   });
 });
 
-// 3.3-E2: Owner can open edit form pre-filled
 test('owner can open edit form pre-filled with expense data', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await setupMocks(page);
@@ -84,7 +84,6 @@ test('owner can open edit form pre-filled with expense data', async ({ page }) =
   });
 });
 
-// 3.3-E3: Owner can save edited expense
 test('owner can save edited expense and list updates', async ({ page }) => {
   const updatedExpense = { ...VIEWER_EXPENSE, title: 'Supermarket', amount: 6000 };
   await test.step('set up mocks', async () => {
@@ -106,7 +105,6 @@ test('owner can save edited expense and list updates', async ({ page }) => {
   });
 });
 
-// 3.3-E4: Member cannot see actions on others' expenses
 test("member role cannot see edit button on another member's expense", async ({ page }) => {
   await test.step('set up mocks as member role', async () => {
     await setupMocks(page, { currentUserRole: 'member' });
@@ -120,7 +118,6 @@ test("member role cannot see edit button on another member's expense", async ({ 
   });
 });
 
-// 3.3-E5: Owner can delete own expense
 test('owner can delete own expense and list updates', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await setupMocks(page);
@@ -142,7 +139,6 @@ test('owner can delete own expense and list updates', async ({ page }) => {
   });
 });
 
-// 3.3-E6: Admin can access actions on all expenses
 test('admin can access edit and delete on all expenses', async ({ page }) => {
   await test.step('set up mocks as admin role', async () => {
     await setupMocks(page, { currentUserRole: 'admin' });
@@ -157,7 +153,6 @@ test('admin can access edit and delete on all expenses', async ({ page }) => {
   });
 });
 
-// 3.3-E8: PATCH failure — edit reverts and error banner appears
 test('edit failure reverts expense and shows error banner', async ({ page }) => {
   await test.step('set up mocks with failing PATCH', async () => {
     await setupMocks(page);
@@ -181,7 +176,6 @@ test('edit failure reverts expense and shows error banner', async ({ page }) => 
   });
 });
 
-// 3.3-E9: DELETE failure — expense reverts and error banner appears
 test('delete failure reverts expense and shows error banner', async ({ page }) => {
   await test.step('set up mocks with failing DELETE', async () => {
     await setupMocks(page);
@@ -205,7 +199,6 @@ test('delete failure reverts expense and shows error banner', async ({ page }) =
   });
 });
 
-// 3.3-E10: Empty state after last expense is deleted
 test('empty state appears after last expense is deleted', async ({ page }) => {
   await test.step('set up mocks with single expense', async () => {
     await injectAuth(page);
@@ -213,6 +206,7 @@ test('empty state appears after last expense is deleted', async ({ page }) => {
     await mockHouseholdsApi(page);
     await mockSettingsMembersApi(page);
     await mockExpensesApi(page, [VIEWER_EXPENSE]);
+    await mockSettlementsApi(page, []);
     await mockExpenseDeleteApi(page, 'exp-viewer');
   });
   await test.step('navigate to finances', async () => {
@@ -231,7 +225,6 @@ test('empty state appears after last expense is deleted', async ({ page }) => {
   });
 });
 
-// 3.3-E7: WCAG 2.1 AA
 test('expense list with items has no WCAG 2.1 AA violations', async ({ page }) => {
   await test.step('set up mocks', async () => {
     await setupMocks(page);

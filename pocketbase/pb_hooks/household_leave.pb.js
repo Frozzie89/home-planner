@@ -1,4 +1,4 @@
-/// POST /api/household/leave — non-admin member voluntarily leaves the household
+/// POST /api/household/leave - non-admin member voluntarily leaves the household
 routerAdd('POST', '/api/household/leave', (e) => {
   try {
     const authRecord = e.auth

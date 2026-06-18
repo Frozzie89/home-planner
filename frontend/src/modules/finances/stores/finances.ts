@@ -9,6 +9,7 @@ import type {
   NewExpensePayload,
   UpdateExpensePayload,
   SettleUpPayload,
+  Settlement,
 } from '@/modules/finances/types';
 import type { MemberRecord } from '@/modules/household/types';
 
@@ -22,7 +23,7 @@ export const useFinancesStore = defineStore('finances', () => {
   const addExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
   const updateExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
   const deleteExpenseStatus = ref<'idle' | 'loading' | 'error' | 'success'>('idle');
-  const settledPairs = ref<Set<string>>(new Set());
+  const activeSettlements = ref<Settlement[]>([]);
 
   watch(
     () => authStore.isAuthenticated,
@@ -31,9 +32,8 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   );
 
-  // Bilateral balances: one entry per (viewer, otherMember) pair.
-  // Positive = viewer is owed; Negative = viewer owes.
-  // All arithmetic operates on integer cents — never floats.
+  /** One balance entry per (viewer, otherMember) pair, in integer cents. Positive = viewer is owed; negative = viewer owes. */
+  // All arithmetic operates on integer cents - never floats.
   const bilateralBalances = computed<Balance[]>(() => {
     const householdStore = useHouseholdStore();
     const viewerMemberId = authStore.memberId;
@@ -42,15 +42,17 @@ export const useFinancesStore = defineStore('finances', () => {
     const splitRatios = householdStore.split_ratios;
     const otherMembers = members.value.filter((m) => m.id !== viewerMemberId);
 
+    const viewerMember = members.value.find((m) => m.id === viewerMemberId);
+    const viewerJoinDate = viewerMember?.created?.replace('T', ' ') ?? null;
+
     // Hoist viewer-side invariants outside the per-expense loop
     const otherNonViewerIds = otherMembers.map((m) => m.id);
     const totalOtherRatio = otherNonViewerIds.reduce((sum, id) => sum + (splitRatios[id] ?? 0), 0);
     const viewerRatio = splitRatios[viewerMemberId] ?? 0;
 
     return otherMembers.map((other) => {
-      let balance = 0; // integer cents; positive = viewer is owed
+      let balance = 0;
 
-      // Hoist other-side invariant per bilateral pair
       const otherNonOtherIds = members.value.filter((m) => m.id !== other.id).map((m) => m.id);
       const totalViewerSideRatio = otherNonOtherIds.reduce(
         (sum, id) => sum + (splitRatios[id] ?? 0),
@@ -58,15 +60,30 @@ export const useFinancesStore = defineStore('finances', () => {
       );
       const otherRatio = splitRatios[other.id] ?? 0;
 
+      // Find the latest settlement for this pair
+      const latestSettlement = activeSettlements.value
+        .filter(
+          (s) =>
+            (s.member_a_id === viewerMemberId && s.member_b_id === other.id) ||
+            (s.member_a_id === other.id && s.member_b_id === viewerMemberId)
+        )
+        .sort((a, b) =>
+          b.settled_at > a.settled_at ? 1 : b.settled_at < a.settled_at ? -1 : 0
+        )[0];
+      const settlementCutoff = latestSettlement?.settled_at ?? null;
+
       for (const expense of expenses.value) {
+        const expTimestamp = (expense.created ?? '9999-12-31 23:59:59.999Z').replace('T', ' ');
+        if (viewerJoinDate !== null && expTimestamp < viewerJoinDate) continue;
+        if (expTimestamp < other.created.replace('T', ' ')) continue;
+        if (settlementCutoff !== null && expTimestamp <= settlementCutoff) continue;
+
         if (expense.member_id === viewerMemberId) {
-          // Viewer paid — compute this other member's share of the non-viewer portion
           const remainder = Math.trunc((expense.amount * (100 - expense.portion)) / 100);
           if (totalOtherRatio > 0) {
             balance += Math.round((remainder * otherRatio) / totalOtherRatio);
           }
         } else if (expense.member_id === other.id) {
-          // Other paid — compute viewer's share of the non-other portion
           const remainder = Math.trunc((expense.amount * (100 - expense.portion)) / 100);
           if (totalViewerSideRatio > 0) {
             balance -= Math.round((remainder * viewerRatio) / totalViewerSideRatio);
@@ -75,9 +92,7 @@ export const useFinancesStore = defineStore('finances', () => {
         // Expenses by a third-party member do not affect this bilateral pair
       }
 
-      const key = `${viewerMemberId}:${other.id}`;
-      const settled = settledPairs.value.has(key);
-      return { member_a_id: viewerMemberId, member_b_id: other.id, amount: settled ? 0 : balance };
+      return { member_a_id: viewerMemberId, member_b_id: other.id, amount: balance };
     });
   });
 
@@ -89,12 +104,13 @@ export const useFinancesStore = defineStore('finances', () => {
     }
     loadStatus.value = 'loading';
     try {
-      await Promise.all([loadExpenses(), loadMembers()]);
+      await Promise.all([loadExpenses(), loadMembers(), loadSettlements()]);
       loadStatus.value = 'success';
     } catch {
       // Clear partial data so bilateralBalances never operates on a mismatched set
       expenses.value = [];
       members.value = [];
+      activeSettlements.value = [];
       loadStatus.value = 'error';
     }
   }
@@ -114,8 +130,15 @@ export const useFinancesStore = defineStore('finances', () => {
     members.value = result;
   }
 
+  async function loadSettlements() {
+    const result = await pb.collection('settlements').getFullList<Settlement>({
+      sort: '-settled_at',
+    });
+    activeSettlements.value = result;
+  }
+
+  /** Adds an expense with optimistic UI. On success, deduplicates against any SSE echo that may arrive before the POST response. */
   async function addExpense(payload: NewExpensePayload) {
-    settledPairs.value = new Set();
     if (!authStore.householdId || !authStore.memberId) return;
     if (loadStatus.value !== 'success') return;
     if (addExpenseStatus.value === 'loading') return;
@@ -166,6 +189,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  /** Updates an expense with optimistic UI. Reverts on error unless the session ended mid-flight. */
   async function updateExpense(id: string, payload: UpdateExpensePayload) {
     if (!authStore.householdId || !authStore.memberId) return;
     if (updateExpenseStatus.value === 'loading') return;
@@ -217,6 +241,7 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  /** Deletes an expense with optimistic UI. Reverts on error unless the session ended mid-flight. */
   async function deleteExpense(id: string) {
     if (!authStore.householdId) return;
     if (deleteExpenseStatus.value === 'loading') return;
@@ -239,9 +264,9 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
+  /** Applies a realtime SSE event. A create upserts by id to deduplicate against an optimistic entry for the same record. */
   function applySSEEvent(action: 'create' | 'update' | 'delete', record: Expense) {
     if (action === 'create') {
-      settledPairs.value = new Set();
       const idx = expenses.value.findIndex((e) => e.id === record.id);
       if (idx >= 0) {
         const synced = [...expenses.value];
@@ -266,17 +291,50 @@ export const useFinancesStore = defineStore('finances', () => {
     }
   }
 
-  function settleUp(payload: SettleUpPayload) {
-    const key = `${payload.member_a_id}:${payload.member_b_id}`;
-    const updated = new Set(settledPairs.value);
-    updated.add(key);
-    settledPairs.value = updated;
+  /** Persists a settlement record to PocketBase with optimistic update. */
+  async function settleUp(payload: SettleUpPayload) {
+    if (!authStore.householdId) return;
+    const optimisticId = `optimistic-settlement-${Date.now()}`;
+    const settled_at = new Date().toISOString().replace('T', ' ');
+    const optimistic: Settlement = {
+      id: optimisticId,
+      household_id: authStore.householdId,
+      member_a_id: payload.member_a_id,
+      member_b_id: payload.member_b_id,
+      settled_at,
+      created: settled_at,
+      updated: settled_at,
+    };
+    activeSettlements.value = [...activeSettlements.value, optimistic];
+
+    try {
+      const created = await pb.collection('settlements').create<Settlement>({
+        household_id: authStore.householdId,
+        member_a_id: payload.member_a_id,
+        member_b_id: payload.member_b_id,
+        settled_at,
+      });
+      // Replace optimistic with real server record
+      activeSettlements.value = activeSettlements.value.map((s) =>
+        s.id === optimisticId ? created : s
+      );
+    } catch {
+      activeSettlements.value = activeSettlements.value.filter((s) => s.id !== optimisticId);
+    }
   }
 
   function isSettledPair(memberBId: string): boolean {
     const viewerMemberId = authStore.memberId;
     if (!viewerMemberId) return false;
-    return settledPairs.value.has(`${viewerMemberId}:${memberBId}`);
+    const hasSettlement = activeSettlements.value.some(
+      (s) =>
+        (s.member_a_id === viewerMemberId && s.member_b_id === memberBId) ||
+        (s.member_a_id === memberBId && s.member_b_id === viewerMemberId)
+    );
+    if (!hasSettlement) return false;
+    // If new expenses exist post-settlement, balance is non-zero and celebration goes away automatically.
+    const balance = bilateralBalances.value.find((b) => b.member_b_id === memberBId);
+    return balance?.amount === 0;
   }
 
   function reset() {
@@ -286,7 +344,7 @@ export const useFinancesStore = defineStore('finances', () => {
     addExpenseStatus.value = 'idle';
     updateExpenseStatus.value = 'idle';
     deleteExpenseStatus.value = 'idle';
-    settledPairs.value = new Set();
+    activeSettlements.value = [];
   }
 
   return {
@@ -303,7 +361,7 @@ export const useFinancesStore = defineStore('finances', () => {
     deleteExpenseStatus,
     deleteExpense,
     applySSEEvent,
-    settledPairs,
+    activeSettlements,
     settleUp,
     isSettledPair,
   };

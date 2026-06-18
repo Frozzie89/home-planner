@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   let _initPromise: Promise<void> | null = null;
 
+  /** Bootstraps auth state from the PocketBase session. Safe to call concurrently - a second call awaits the first in-flight promise. */
   async function init(): Promise<void> {
     if (initStatus.value === 'success') return;
     if (_initPromise) return _initPromise;
@@ -40,6 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** Resolves the current user's household membership. A 404 means no household yet (new user or removed from one). */
   async function loadMembership() {
     if (!userId.value) return;
     try {
@@ -61,6 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** Called once by the OAuth2 callback view after PocketBase exchanges the provider code for a session. */
   async function onOAuth2Success() {
     if (!pb.authStore.isValid || !pb.authStore.record) {
       throw new Error('Auth store not valid after OAuth2 exchange');

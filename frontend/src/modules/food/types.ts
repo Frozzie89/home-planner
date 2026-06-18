@@ -25,7 +25,7 @@ export interface GroceryItem {
   unit: string | null; // null for manual adds that omit unit
   checked: boolean;
   meal_id: string | null; // null = manual add (not from a meal)
-  week_start: string; // PocketBase datetime string — the Monday/reminder_day of this week
+  week_start: string; // PocketBase datetime string - the Monday/reminder_day of this week
   created: string;
   updated: string;
 }

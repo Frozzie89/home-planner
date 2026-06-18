@@ -65,7 +65,7 @@ function makeStoreState(bilateralBalances: Balance[] = []) {
     deleteExpenseStatus: 'idle' as const,
     settleUp: mockSettleUp,
     isSettledPair: mockIsSettledPair,
-    settledPairs: ref(new Set<string>()),
+    activeSettlements: ref([]),
   };
 }
 

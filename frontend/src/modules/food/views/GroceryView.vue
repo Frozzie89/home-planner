@@ -1,3 +1,3 @@
 <template>
-  <div>Grocery List — Story 4.3</div>
+  <div>Grocery List — coming soon</div>
 </template>

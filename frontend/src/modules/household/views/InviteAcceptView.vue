@@ -94,7 +94,7 @@ function signIn(provider: OAuth2Provider) {
       })
     );
   } catch {
-    // storage unavailable — proceed anyway, invite acceptance will fail gracefully
+    // storage unavailable - proceed anyway, invite acceptance will fail gracefully
   }
   const redirectUrl = `${window.location.origin}/auth`;
   window.location.href = `${provider.authURL}${encodeURIComponent(redirectUrl)}`;

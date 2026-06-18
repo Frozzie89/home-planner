@@ -122,7 +122,7 @@ watch(open, async (isOpen) => {
 </template>
 
 <style scoped>
-/* ── Shared overlay ── */
+/* === Shared overlay === */
 .sheet-overlay {
   position: fixed;
   /* top and height are set dynamically via :style to track the visual viewport
@@ -139,7 +139,7 @@ watch(open, async (isOpen) => {
   justify-content: center;
 }
 
-/* ── Shared sheet panel ── */
+/* === Shared sheet panel === */
 .sheet {
   background: var(--p-surface-card);
   box-sizing: border-box;
@@ -185,7 +185,7 @@ watch(open, async (isOpen) => {
   gap: var(--space-2);
 }
 
-/* ── Mobile: slide-up animation ── */
+/* === Mobile: slide-up animation === */
 .sheet-enter-active,
 .sheet-leave-active {
   transition: opacity 200ms ease;
@@ -206,7 +206,7 @@ watch(open, async (isOpen) => {
   transform: translateY(100%);
 }
 
-/* ── Desktop (≥ 768px): centered dialog ── */
+/* === Desktop (>=768px): centered dialog === */
 @media (min-width: 768px) {
   .sheet-overlay {
     align-items: center;
