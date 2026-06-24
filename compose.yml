@@ -31,7 +31,7 @@ services:
     environment:
       # Substituted into the built JS bundle at startup (frontend/docker-entrypoint.d/40-pb-url.sh)
       - POCKETBASE_HOST=${POCKETBASE_HOST}
-      - POCKETBASE_SCHEME=${POCKETBASE_SCHEME:-https}
+      - POCKETBASE_SCHEME=${POCKETBASE_SCHEME:-http}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_HOST}`)"
