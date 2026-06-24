@@ -8,6 +8,11 @@ Commit messages follow the [Conventional Commits](https://www.conventionalcommit
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-24
+
+### Fixed
+- PocketBase API URL is now configured at runtime instead of being baked in at build time, so a single Docker image works across environments (#80)
+
 ## [0.1.0] - 2026-06-16
 
 ### Added
