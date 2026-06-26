@@ -8,6 +8,12 @@ Commit messages follow the [Conventional Commits](https://www.conventionalcommit
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-06-26
+
+### Fixed
+- Finances page no longer crashes when expenses exist; a per-member `created` timestamp was read without a null guard, throwing a TypeError that prevented the page from loading
+- E2E tests now build the frontend before previewing locally, so they no longer run against a stale build
+
 ## [0.1.1] - 2026-06-24
 
 ### Fixed
