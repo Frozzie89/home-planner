@@ -59,6 +59,7 @@ export const useFinancesStore = defineStore('finances', () => {
         0
       );
       const otherRatio = splitRatios[other.id] ?? 0;
+      const otherJoinDate = other.created?.replace('T', ' ') ?? null;
 
       // Find the latest settlement for this pair
       const latestSettlement = activeSettlements.value
@@ -75,7 +76,7 @@ export const useFinancesStore = defineStore('finances', () => {
       for (const expense of expenses.value) {
         const expTimestamp = (expense.created ?? '9999-12-31 23:59:59.999Z').replace('T', ' ');
         if (viewerJoinDate !== null && expTimestamp < viewerJoinDate) continue;
-        if (expTimestamp < other.created.replace('T', ' ')) continue;
+        if (otherJoinDate !== null && expTimestamp < otherJoinDate) continue;
         if (settlementCutoff !== null && expTimestamp <= settlementCutoff) continue;
 
         if (expense.member_id === viewerMemberId) {
