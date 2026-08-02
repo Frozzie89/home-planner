@@ -2,15 +2,40 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useUiStore } from './ui';
 
+type MockMediaQueryList = MediaQueryList & {
+  triggerChange: (matches: boolean) => void;
+};
+
 function mockMatchMedia(matches: boolean) {
+  let currentMatches = matches;
+  const listeners = new Set<(event: MediaQueryListEvent) => void>();
+  const mediaQueryList = {
+    get matches() {
+      return currentMatches;
+    },
+    media: '(prefers-color-scheme: dark)',
+    onchange: null,
+    addEventListener: vi.fn((_event: string, listener: (event: MediaQueryListEvent) => void) => {
+      listeners.add(listener);
+    }),
+    removeEventListener: vi.fn((_event: string, listener: (event: MediaQueryListEvent) => void) => {
+      listeners.delete(listener);
+    }),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+    triggerChange(nextMatches: boolean) {
+      currentMatches = nextMatches;
+      listeners.forEach((listener) => listener({ matches: nextMatches } as MediaQueryListEvent));
+    },
+  } as MockMediaQueryList;
+
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockReturnValue({
-      matches,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }),
+    value: vi.fn().mockReturnValue(mediaQueryList),
   });
+
+  return mediaQueryList;
 }
 
 beforeEach(() => {
@@ -71,6 +96,46 @@ describe('useUiStore', () => {
       store.initTheme();
 
       expect(store.isDark).toBe(false);
+    });
+
+    it('updates when the system preference changes without a localStorage preference', () => {
+      const mediaQueryList = mockMatchMedia(false);
+
+      const store = useUiStore();
+      store.initTheme();
+      mediaQueryList.triggerChange(true);
+
+      expect(store.isDark).toBe(true);
+      expect(document.documentElement.classList.contains('p-dark')).toBe(true);
+
+      mediaQueryList.triggerChange(false);
+
+      expect(store.isDark).toBe(false);
+      expect(document.documentElement.classList.contains('p-dark')).toBe(false);
+    });
+
+    it('ignores system preference changes after a preference is saved', () => {
+      const mediaQueryList = mockMatchMedia(false);
+
+      const store = useUiStore();
+      store.initTheme();
+      store.toggleTheme();
+
+      mediaQueryList.triggerChange(false);
+
+      expect(store.isDark).toBe(true);
+      expect(document.documentElement.classList.contains('p-dark')).toBe(true);
+    });
+
+    it('does not register duplicate system preference listeners when initialized multiple times', () => {
+      const mediaQueryList = mockMatchMedia(false);
+
+      const store = useUiStore();
+      store.initTheme();
+      store.initTheme();
+
+      expect(mediaQueryList.removeEventListener).toHaveBeenCalledOnce();
+      expect(mediaQueryList.addEventListener).toHaveBeenCalledTimes(2);
     });
   });
 
