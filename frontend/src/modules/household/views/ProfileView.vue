@@ -39,6 +39,13 @@ const hasChange = computed(() => displayNameInput.value.trim() !== currentDispla
 
 const isSaveDisabled = computed(() => !hasChange.value || saveStatus.value === 'loading');
 
+watch(displayNameInput, () => {
+  if (saveStatus.value === 'success' || saveStatus.value === 'error') {
+    saveStatus.value = 'idle';
+  }
+});
+
+
 const isNonAdminMember = computed(() => authStore.role === 'member');
 
 onMounted(async () => {
@@ -113,6 +120,7 @@ async function save() {
     displayNameInput.value = trimmed;
     saveStatus.value = 'success';
     toast.add({ severity: 'success', summary: 'Display name saved', life: 3000 });
+    setTimeout(() => { if (saveStatus.value === 'success') saveStatus.value = 'idle'; }, 1500);
   } catch {
     saveStatus.value = 'error';
     toast.add({ severity: 'error', summary: "Couldn't save — try again", life: 3000 });
